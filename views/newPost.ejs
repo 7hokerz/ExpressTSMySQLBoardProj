@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create New Post</title>
+  <link rel="stylesheet" href="/newPost.css">
+</head>
+<body>
+  <header>
+    <h1>새 게시글 작성</h1>
+  </header>
+  <main>
+    <form method="POST" action="/posts/new">
+      <div>
+        <label for="title">제목:</label>
+        <input type="text" id="title" name="title" placeholder="제목을 입력하세요" required>
+      </div>
+      <div>
+        <label for="content">내용:</label>
+        <textarea id="content" name="content" rows="10" placeholder="내용을 입력하세요" required></textarea>
+      </div>
+      <div>
+        <label for="img">이미지:</label>
+        <img id="uploadedImage" src="" alt="Uploaded Image" style="max-width: 300px; display: none;" />
+      </div>
+      <input type="hidden" id="imageurl" name="imageurl" />
+      <button type="submit">제출하기</button>
+    </form>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <div>
+        <input type="file" name="image" />
+      </div>
+      <div>
+        <label for="title">파일 이름:</label>
+        <input type="text" name="title" required/>
+      </div>
+      <button type="submit">업로드하기</button>
+    </form>
+    <script>
+      document.getElementById('uploadForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const form = event.target;
+        const formData = new FormData(form);// 폼 데이터를 수집
+
+        // 서버에 파일 업로드 요청
+        const response = await fetch('/posts/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.json();
+        console.log(result.imageUrl);
+        if (response.ok) {// 업로드된 이미지 경로 설정
+          const uploadedImage = document.getElementById('uploadedImage');
+          uploadedImage.src = result.imageUrl;
+          uploadedImage.style.display = 'block'; // 이미지를 화면에 표시
+          document.getElementById('imageurl').value = result.imageUrl;
+        } else {
+          alert('File upload failed.');
+        }
+      });
+    </script>
+  </main>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= post.title %></title>
+  <link rel="stylesheet" href="/postDetails.css">
+</head>
+<body>
+  <div class="container">
+    <h1>제목: <%= post.title %></h1>
+    <p><%= post.content %></p>
+    <img id="uploadedImage" src="<%= post.imageurl %>" alt="Uploaded Image" style="max-width: 500px;" />
+    <!-- 이미지 표시 내용 추가 -->
+    <h4>작성일: <%= new Date(post.created_at).toLocaleDateString() %></h4>
+    <h4>작성자: <%= postUser.username %></h4>
+    <h4>좋아요: <%= post.like_count %>개</h4>
+    <form method="POST" action="/posts/<%= post.post_id %>/<%= post.stat %>">
+      <button type="submit">좋아요</button>
+    </form>
+    
+    <form method="POST" action="/posts/<%= post.post_id %>/commentCreate">
+      <div>
+        <textarea id="content" name="content" rows="5" placeholder="내용을 입력하세요" required></textarea>
+      </div>
+      <button type="submit">댓글 작성</button>
+    </form>
+    <div>
+
+    </div>
+
+    <div class="comment-list">
+      <% comment.forEach(comment => { %>
+          <div class="comment-card">
+            <p><%= comment.content %></p>
+            <span>(작성일: <%= new Date(comment.created_at).toLocaleDateString() %>)</span>
+            <span>작성자: <%= comment.commentUser.username %></span>
+            <form method="POST" 
+            action="/posts/<%= post.post_id %>/deleteComment/<%= comment.comment_id %>?_method=DELETE">
+              <button type="submit">댓글 삭제</button>
+            </form>
+          </div>
+      <% }); %>
+    </div>
+
+    <a href="/posts/<%= post.post_id %>/update">게시글 수정</a>
+    <a href="/posts">목록으로 돌아가기</a>
+    <form action="/posts/<%= post.post_id %>?_method=DELETE" method="POST">
+      <button type="submit">게시글 삭제</button>
+    </form>
+  </div>
+  <script>
+    const uploadedImage = document.getElementById('uploadedImage');
+    if (!uploadedImage.src || uploadedImage.src.endsWith('undefined') || uploadedImage.src === window.location.href) {
+      uploadedImage.style.display = 'none';
+    }//3가지 경우에 대해 처리한다.
+  </script>
+</body>
+</html>
+
+
+
+
+<!--
+<a href="#" onclick="deletePost('<%= post.id %>')">게시글 삭제</a>
+<script>
+    /*
+      a 태그는 Delete 요청을 보낼 수 없으므로, 함수를 생성하고 fetch를 이용하여 DELETE 요청을 
+      따로 보내줄 수 있다. 그 후 아래 코드를 통해 리디렉트한다.
+      + 라우터에서 res.redirect('/')를 써도 작동하지 않는다. 이 점 유의
+    */
+    async function deletePost(postId) {
+      const response = await fetch(`/posts/${postId}`, {
+        method: 'DELETE',
+        headers :{
+          'Content-Type': 'application/json',
+        }
+      });
+      const status = await response.json();
+
+      if(status.ok){
+        window.location.href = '/posts';
+      }else {
+        alert('Failed to delete post: ' + data.message);
+      }
+    }
+  </script>
+-->

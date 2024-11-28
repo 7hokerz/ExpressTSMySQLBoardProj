@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    /* Visit https://aka.ms/tsconfig to read more about this file */
+    "outDir": "./dist",  // 컴파일된 JavaScript 파일의 출력 폴더
+    "rootDir": "./src",  // TypeScript 파일이 있는 폴더
+    "moduleResolution": "node",
+    "target": "ES6",
+    "module": "commonjs",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,            
+    "esModuleInterop": true,                             
+    "forceConsistentCasingInFileNames": true,            
+    "strict": true,                                      
+    "skipLibCheck": true                   
+  },
+  "include": ["src/**/*.ts"],  // 컴파일할 TypeScript 파일의 경로
+  "exclude": ["node_modules", "public", "uploads", "views"]  // 컴파일 시 제외할 폴더
+}
