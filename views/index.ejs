@@ -10,7 +10,7 @@
     <div class="container">
         <h1>게시판</h1>
         <div class="actions">
-            <a href="/logout">Log Out</a>
+            <button type="button" onclick="logout()">Log Out</button>
             <a href="/user">회원정보</a>
             <a href="/posts/new">새 게시글 작성</a>
         </div>
@@ -25,5 +25,63 @@
             <% }); %>
         </div>
     </div>
+    <div id="notificationContainer" class="notification-container">
+
+    </div>
+    <script>
+        async function logout() {
+            try {
+                const res = await fetch('/logout', {
+                    method: 'GET',
+                });
+                const payload = await res.json();
+
+                if (payload.ok) {
+                    window.location.replace('/login'); // 로그아웃 성공 시 로그인 페이지로 리다이렉트
+                } else {
+                    alert(`로그아웃 실패: ${payload.error.message}`);
+                }
+            } catch (error) {
+                console.error('오류 발생:', error);
+                alert('요청 중 오류가 발생했습니다.');
+            }
+        }
+
+        const notificationContainer = document.getElementById('notificationContainer');
+
+        const eventSource = new EventSource('/posts/notifications/stream');
+
+        eventSource.onmessage = (event) => {
+            const comment = JSON.parse(event.data);
+            showNotification(`New comment: ${comment.content}`);
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.innerHTML = `
+                <span>${message}</span>
+                <button class="close-btn" onclick="this.parentElement.remove()">×</button>
+            `;
+
+            notificationContainer.appendChild(notification);
+
+            setTimeout(() => notification.remove(), 10000);
+        }
+
+        eventSource.addEventListener('close', (event) => {
+            console.log('Server closed the connection');
+            eventSource.close();
+        });
+
+        // 페이지를 떠날 때 SSE 종료
+        window.addEventListener('beforeunload', () => {
+            if (eventSource) {
+                eventSource.close();
+                console.log('SSE connection closed');
+            }
+        });
+
+    </script>
 </body>
 </html>

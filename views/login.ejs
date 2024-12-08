@@ -10,16 +10,53 @@
         <h1>로그인</h1>
     </header>
     <main>
-        <form method="POST" action="/login">
+        <div class="login-box">
             <div>
-                <label for="username">Username: </label><input type="text" name="username" />
+                <label for="username">Username: </label>
+                <input type="text" id="username" />
             </div>
             <div>
-                <label for="password">Password: </label><input type="password" name="password" />
+                <label for="password">Password: </label>
+                <input type="password" id="password" />
             </div>
-            <button>Log In</button>
+            <button type="button" onclick="login()">Log In</button>
+            
             <a href="/signup">Sign Up</a>
-        </form>
+        </div>
     </main>
+    <script>
+        async function login() {
+            let id = document.getElementById('username').value;
+            let password = document.getElementById('password').value;
+
+            if(!(id && password)) {
+                alert('아이디와 비밀번호는 필수입니다.');
+                return;
+            }
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json' // Content-Type을 JSON으로 설정
+                    },
+                    body: JSON.stringify({
+                        username: id, 
+                        password: btoa(password),
+                    })
+                });
+                const payload = await res.json();
+                
+                if(payload.ok) {
+                    window.location.replace('/posts');
+                }
+                else {
+                    alert(`로그인 실패: ${payload.error.message}`);
+                }
+            } catch (error) {
+                console.error('오류 발생:', error);
+                alert('요청 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
 </body>
 </html>
