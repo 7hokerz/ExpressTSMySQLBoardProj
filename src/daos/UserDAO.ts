@@ -1,35 +1,25 @@
-import { Connection, PoolConnection } from 'mysql2/promise';
-import { UserDTO } from '../utils/shared-modules';
-import { injectable, inject } from 'tsyringe';
-import { QueryService } from '../services/QueryService';
+import { PoolConnection } from 'mysql2/promise';
+import { IUserRepository } from '../domain/interfaces';
+import QueryExecutor from './QueryExecutor';
 
 interface UserType {
     username: string;
     password: string;
 }
 
-@injectable()
-export default class UserDAO {
-    constructor(
-        connection: Connection | PoolConnection,
-        @inject(QueryService) private queryService: QueryService = new QueryService(connection)
-    ) {}
+export default class UserDAO implements IUserRepository {
+    constructor(connection: PoolConnection) {
+        QueryExecutor.initialize(connection);
+    }
 
-    async getUser(username: string): Promise<UserDTO | null> {
+    async getUser(username: string): Promise<any> {
         const query = `
         SELECT * FROM users 
         WHERE username = ?`;
 
-        const { rows } = await this.queryService.executeQuery<any>(query, [username]);
-        const user = rows[0]; 
-        
-        if(user === null || user === undefined) return null;
+        const { rows } = await QueryExecutor.executeQuery<any>(query, [username]);
 
-        return new UserDTO(
-            user.id,
-            user.username,
-            user.password,
-        );
+        return rows[0] || null;
     }
 
     async createUser(newUser: UserType): Promise<void> {
@@ -37,7 +27,7 @@ export default class UserDAO {
         INSERT INTO users (username, password) 
         VALUES (?, ?)`;
         
-        await this.queryService.executeQuery<never>(query, [newUser.username, newUser.password]);
+        await QueryExecutor.executeQuery<never>(query, [newUser.username, newUser.password]);
     }
 
     async removeUser(user_id: number): Promise<void> {
@@ -45,7 +35,7 @@ export default class UserDAO {
         DELETE FROM users 
         WHERE id = ?`;
 
-        await this.queryService.executeQuery<never>(query, [user_id]);
+        await QueryExecutor.executeQuery<never>(query, [user_id]);
     }
     
     async editUser(curUserId: number, editUser: UserType): Promise<void> {
@@ -54,7 +44,7 @@ export default class UserDAO {
         SET username = ?, password = ? 
         WHERE id = ?`;
 
-        await this.queryService.executeQuery<never>(query, 
+        await QueryExecutor.executeQuery<never>(query, 
             [editUser.username, editUser.password, curUserId]);
     }
 }

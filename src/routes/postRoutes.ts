@@ -1,16 +1,11 @@
 import express, { Request, Response } from 'express';
-import rateLimit from 'express-rate-limit';
-const router = express.Router();//특정 경로에 대한, 모듈화된 라우팅 구현
+import { PostController } from '../controllers';
+import uploadRouter from './imageRoutes';
+import { imageCacheMiddleware } from '../middlewares/imageCacheMiddleware';
 
-import postController from '../controllers/postController';
-const uploadRouter = require(`../../routes/imageRoutes`);
+const router = express.Router();
 
-//일정 횟수가 초과하면 오류 메시지 전송
-const limiter = rateLimit({
-    windowMs: 1 * 60 * 1000,
-    max: 10,
-    message: "요청 횟수 초과.",
-});
+const postController = new PostController();
 
 router.use('/upload', uploadRouter); // 이미지 업로드에 대한 라우터
 
@@ -21,20 +16,22 @@ router.route('/new') // 게시글 작성 페이지 렌더링 및 게시글 작�
     .post(postController.newpost);
 
 router.route('/:postId') // 게시글 세부 페이지 렌더링 및 게시글 삭제 요청 라우터
-    .get(postController.postdetail)
+    .get(imageCacheMiddleware, postController.postdetail)
     .delete(postController.deletepost);
 
 router.route('/:postId/update') // 게시글 수정 페이지 렌더링 및 게시글 수정 라우터
     .get(postController.renderUpdate)
     .put(postController.updatepost);
 
-router.post('/:postId/like', limiter, postController.like); // 좋아요 기능 라우터
+router.post('/:postId/like', postController.like); // 좋아요 기능 라우터
 
 router.post('/:postId/deleteLike', postController.unlike); // 좋아요 취소 기능 라우터
 
-router.post('/:postId/commentCreate', postController.comment); // 댓글 생성 라우터
+router.post('/:postId/comment', postController.comment); // 댓글 생성 라우터
 
-router.delete('/:postId/deleteComment/:commentId', postController.deletecomment); // 댓글 삭제 라우터
+router.delete('/:postId/comment/:commentId', postController.deletecomment); // 댓글 삭제 라우터
+
+router.get('/notifications/stream', postController.sse);
 
 export default router;
 

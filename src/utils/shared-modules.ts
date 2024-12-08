@@ -2,52 +2,24 @@
 import { withConnection } from '../decorators/withConnection';
 import autoBind from '../decorators/autoBind';
 
-// DTO
-import { 
-    PostDTO,
-    PostDetailsDTO,
-    CommentDTO,
-    UserDTO 
-} from '../dtos/DTOs';
-
 // 오류 모듈
 import HttpError from '../errors/HttpError';
 import TransactionError from '../errors/TransactionError';
 import errorHandler from '../middlewares/errorHandler';
 
 // DB 및 보안 모듈
-import DAOFactory from '../factories/DAOFactory';
-import db from '../config/mysql';
+import Database from '../config/mysql';
 import jwtToken from '../middlewares/token';
 import AuthMiddleware from '../middlewares/authMiddleware';
 
-// DAO 모듈
-import UserDAO from '../daos/UserDAO';
-import PostDAO from '../daos/PostDAO';
-import LikeDAO from '../daos/LikeDAO';
-import ReplyDAO from '../daos/ReplyDAO';
-import RefreshTokenDAO from '../daos/RefreshTokenDAO';
-
-// 라우터 모듈
-import postRoutes from '../routes/postRoutes';
-import loginRoutes from '../routes/loginRoutes';
-import userInfoRoutes from '../routes/userInfo';
-
-const routes = {
-    posts: postRoutes,
-    login: loginRoutes,
-    userInfo: userInfoRoutes,
-};
+import { CookieUtil } from './CookieUtil';
+import { Validation } from './Validation';
 
 export {
-    withConnection, autoBind, errorHandler, 
-    AuthMiddleware, routes, db, 
-    jwtToken,
-    DAOFactory, 
-    HttpError, TransactionError,
-    PostDTO, PostDetailsDTO,
-    CommentDTO, UserDTO,
-    UserDAO, PostDAO, ReplyDAO, LikeDAO, RefreshTokenDAO,
+    withConnection, autoBind,
+    AuthMiddleware, Database, jwtToken,
+    errorHandler, HttpError, TransactionError,
+    CookieUtil, Validation,
 }
 
 /*

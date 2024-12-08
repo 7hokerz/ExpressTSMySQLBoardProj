@@ -6,5 +6,9 @@ export default function (err: any, req: Request, res: Response, next: NextFuncti
     if(err instanceof TransactionError) console.log(err.getErrorDetail());
     else console.log(err);
     
-    res.status(statusCode).send(err.message);
+    res.status(statusCode).json({
+        error: {
+            message: err.message
+        }
+    });
 };

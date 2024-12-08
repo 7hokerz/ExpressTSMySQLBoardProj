@@ -1,48 +1,46 @@
+import bcrypt from 'bcrypt';
 import { 
-    DAOFactory, 
     HttpError, 
-    AuthMiddleware, 
     jwtToken,
     withConnection,
-    UserDTO,
-    TransactionError,
+    Validation
 } from '../utils/shared-modules';
-/*
-    입력값에 대한 기본 검증은 연결을 하지 않고도 할 수 있도록 변경 필요
-*/
+import { UserDTO } from '../domain/entities';
+import { DAOFactory, UserDAO, RefreshTokenDAO } from '../daos';
+
 class PasswordManager {
     private static readonly SALT_ROUNDS = 10;
 
     static async hashing(password: string): Promise<string> {
-        const bcrypt = await import('bcrypt'); // 해싱
         return bcrypt.hash(password, this.SALT_ROUNDS);
     }
 
     static async comparePwd(input_Pw: string, DB_Pw: string): Promise<boolean> {
-        const bcrypt = await import('bcrypt'); // 해싱
         return bcrypt.compare(input_Pw, DB_Pw);
     }
 }
 
-class userService {
-    #daofactory: DAOFactory;
-    private readonly jwttoken: jwtToken;
-    private readonly auth: AuthMiddleware;
+interface UserInput {
+    username: string;
+    password: string;
+}
 
-    constructor() { // 생성자
-        this.jwttoken = new jwtToken();
-        this.auth = new AuthMiddleware();
-        this.#daofactory = DAOFactory.getInstance();
-    }
+export default class UserService {
+    private readonly jwttoken: jwtToken = new jwtToken();
+    private daofactory!: DAOFactory;
 
-    @withConnection<void>(false, HttpError)
+    private async validateUserInput(input: UserInput): Promise<void> {
+        Validation.validUserInput([
+            { value: input.username },
+            { value: input.password }
+        ]);
+    } 
+
+    @withConnection(false)
     async signup(username: string, password: string): Promise<void> {
-        const connection = arguments[arguments.length - 1];
+        await this.validateUserInput({ username, password });
 
-        if(!this.auth.regCheck(username, password)){
-            throw new HttpError(400, `올바르지 않은 입력입니다.`);
-        }
-        const userDAO = this.#daofactory.createUserDAO(connection);
+        const userDAO = this.daofactory.getDAO(UserDAO);
         const user = await userDAO.getUser(username);
         if(user){
             throw new HttpError(400, `duplicate username: ${username}`);
@@ -52,63 +50,71 @@ class userService {
         await userDAO.createUser({username, password: hashedPwd});
     }
 
-    @withConnection<void>(true, HttpError, TransactionError)
-    async withdraw(user_id: number): Promise<void> {
-        const connection = arguments[arguments.length - 1];
-        const userDAO = this.#daofactory.createUserDAO(connection);
-        const refreshTokenDAO = this.#daofactory.createRefreshTokenDAO(connection);
-
-        await refreshTokenDAO.deleteAllByUser(user_id);
-        await userDAO.removeUser(user_id);
+    @withConnection(true)
+    async withdraw(userId: number): Promise<void> {
+        const [userDAO, refreshTokenDAO] = await Promise.all([
+            this.daofactory.getDAO(UserDAO),
+            this.daofactory.getDAO(RefreshTokenDAO),
+        ]);
+        await Promise.all([
+            refreshTokenDAO.deleteAllByUser(userId),
+            userDAO.removeUser(userId)
+        ]);
     }
 
-    @withConnection<string>(false, HttpError)
-    async login(username: string, password: string): Promise<number> {
-        const connection = arguments[arguments.length - 1];
-        const userDAO = this.#daofactory.createUserDAO(connection);
-        const refreshTokenDAO = this.#daofactory.createRefreshTokenDAO(connection);
+    @withConnection(false)
+    async login(username: string, password: string): Promise<UserDTO> {
+        await this.validateUserInput({ username, password });
+        const [userDAO, refreshTokenDAO] = await Promise.all([
+            this.daofactory.getDAO(UserDAO),
+            this.daofactory.getDAO(RefreshTokenDAO),
+        ]);
         
         const user = await userDAO.getUser(username);
-        if(!this.auth.regCheck(username, password)){
-            throw new HttpError(400, `올바르지 않은 입력입니다.`);
-        }
-
-        if (user === null || user === undefined) {
+        
+        if (!user) {
             throw new HttpError(400, `존재하지 않는 이름: ${username}`);
         }
-        const pwdState = await PasswordManager.comparePwd(password, user.getPwd() as string);
+        const pwdState = await PasswordManager.comparePwd(password, user.password);
 
         if (!pwdState) {
             throw new HttpError(400, `패스워드 불 일 치`);
         }
-        await refreshTokenDAO.deleteAllByUser(user.user_id);
+        await refreshTokenDAO.deleteAllByUser(user.id);
 
-        return user.user_id;
+        return new UserDTO(
+            user.id,
+        );
     }
 
-    @withConnection(false, HttpError)
+    @withConnection(false)
     async logout(user_id: number): Promise<void> {
-        const connection = arguments[arguments.length - 1];
-        const refreshTokenDAO = this.#daofactory.createRefreshTokenDAO(connection);
+        const refreshTokenDAO = this.daofactory.getDAO(RefreshTokenDAO);
         await refreshTokenDAO.deleteAllByUser(user_id);
     }
 
-    @withConnection<string>(false, HttpError)
+    @withConnection(false)
     async renderUserPage(username: string): Promise<UserDTO> {
-        const connection = arguments[arguments.length - 1];
-        const userDAO = this.#daofactory.createUserDAO(connection);
+        const userDAO = this.daofactory.getDAO(UserDAO);
         const user = await userDAO.getUser(username);
 
-        if (user === null || user === undefined) {
+        if (!user) {
             throw new HttpError(400, `존재하지 않는 유저: ${username}`);
         }
-        return user;
+        return new UserDTO(
+            user.user_id,
+            user.username,
+            user.pwd,
+        );
     }
 
-    @withConnection<string>(false, HttpError)
+    @withConnection(false)
     async edit(curUsername : string, newUser: any): Promise<any> {
-        const connection = arguments[arguments.length - 1];
-        const userDAO = this.#daofactory.createUserDAO(connection);
+        await Promise.all([
+            Validation.validUserInput([{ value: newUser.username }]),
+            Validation.validUserInput([{ value: newUser.password }])
+        ]);
+        const userDAO = this.daofactory.getDAO(UserDAO);
         
         const user = await userDAO.getUser(newUser.username);
         
@@ -120,7 +126,7 @@ class userService {
         if(!(curUser?.user_id)){// 회원 유무 검증
             throw new HttpError(400, `올바르지 않은 유저: ${curUsername}`);
         }
-        const pwdState = await PasswordManager.comparePwd(newUser.curPw, curUser.getPwd() as string);
+        const pwdState = await PasswordManager.comparePwd(newUser.curPw, curUser.password);
 
         if (!pwdState) {// 패스워드 일치 검증
             throw new HttpError(400, '패스워드 불일치');
@@ -137,5 +143,3 @@ class userService {
         return { accessToken, refreshToken };
     }
 }
-
-export default new userService();

@@ -8,6 +8,10 @@ function default_1(err, req, res, next) {
         console.log(err.getErrorDetail());
     else
         console.log(err);
-    res.status(statusCode).send(err.message);
+    res.status(statusCode).json({
+        error: {
+            message: err.message
+        }
+    });
 }
 ;

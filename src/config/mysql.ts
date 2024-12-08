@@ -1,38 +1,33 @@
 import mysql, { Pool, PoolConnection } from 'mysql2/promise';
+import { container, singleton } from "tsyringe";
+import env from './index';
 
-class Database {
-    private static instance: Database;
+@singleton()
+export default class Database {
     #pool: Pool;
     #activeConnections: Set<PoolConnection> = new Set(); // 커넥션들을 담는 Set
     
-    private constructor() {
+    constructor() {
       this.#pool = mysql.createPool({
-        host: process.env.DB_HOST as string,
-        port: parseInt(process.env.DB_PORT as string, 10),
-        user: process.env.DB_UID as string,
-        password: process.env.DB_PWD as string,
-        database: process.env.DB_DATABASE as string,
-        connectionLimit: 5,
+        host: env.db.host,
+        port: parseInt(env.db.port as string, 10),
+        user: env.db.uid,
+        password: env.db.pwd,
+        database: env.db.database,
+        connectionLimit: 10,
         enableKeepAlive: true, // Keep-Alive 활성화
         keepAliveInitialDelay: 10000, // Keep-Alive 초기 지연 (ms 단위)
       });
     }
     
-    public static getInstance(): Database { // DB 인스턴스를 반환
-      if (!Database.instance) {
-          Database.instance = new Database();
-      }
-      return Database.instance;
-    }
-
-    public async getConnection(): Promise<PoolConnection | null> { // DB 연결
+    public async getConnection(): Promise<PoolConnection> { // DB 연결
       try {
         const conn = await this.#pool.getConnection();
         this.#activeConnections.add(conn);
         return conn;
       } catch(error) {
         console.error("MySQL connection error: " + error);
-        return null;
+        throw new Error;
       }
     }
 
@@ -41,7 +36,7 @@ class Database {
         conn.release();
         this.#activeConnections.delete(conn);
       }catch(error) {
-        console.error("MySQL release error: " + error);
+        console.error("Failed to release connection:", error);
       }
     }
 
@@ -53,7 +48,7 @@ class Database {
         
         await this.#pool.end();
       } catch (error) {
-        console.error("MySQL end error: " + error);
+        console.error("Failed to close the pool:", error);
       }
     }
     // 연결된 모든 커넥션들을 반환
@@ -61,9 +56,7 @@ class Database {
       return Array.from(this.#activeConnections);
     }
 }
-
-const db = Database.getInstance();
-export default db;
+container.register('Database', { useClass: Database });
 /*
   DB 연결 및 종료 함수를 모듈 형식으로 반환
 

@@ -4,14 +4,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const controllers_1 = require("../controllers");
 const router = express_1.default.Router();
-const userController_1 = __importDefault(require("../controllers/userController"));
+const userController = new controllers_1.UserController();
 // 회원정보 페이지 렌더링
-router.get('/', userController_1.default.renderUserInfoPage);
+router.get('/', userController.renderUserInfoPage);
 // 회원정보 수정 페이지 렌더링 및 수정 라우터
 router.route('/edit')
-    .get(userController_1.default.renderEditPage)
-    .put(userController_1.default.edit);
+    .get(userController.renderEditPage)
+    .put(userController.edit);
 exports.default = router;
 /*
     userInfo.js의 주요 기능 설명

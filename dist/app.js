@@ -15,19 +15,27 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = __importDefault(require("dotenv")); // 타입 및 모듈, 미들웨어 등 임포트
 dotenv_1.default.config();
 require("reflect-metadata");
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const express_2 = __importDefault(require("./config/express"));
 const shared_modules_1 = require("./utils/shared-modules");
+const routes_1 = __importDefault(require("./routes"));
+//일정 횟수가 초과하면 오류 메시지 전송
+const limiter = (0, express_rate_limit_1.default)({
+    windowMs: 1 * 60 * 1000,
+    max: 10,
+    message: "요청 횟수 초과.",
+});
 const auth = new shared_modules_1.AuthMiddleware();
 const app = (0, express_1.default)();
 (0, express_2.default)(app);
 app.use(auth.cookieAuth); // 토큰을 해석하여 body에 삽입
-// 라우터
-app.use('/', shared_modules_1.routes.login);
+//app.use(limiter);
+app.use('/', routes_1.default.login);
 app.use('/uploads', auth.requireAuth, express_1.default.static(path_1.default.join(__dirname, '../uploads')));
-app.use('/posts', auth.requireAuth, shared_modules_1.routes.posts);
-app.use('/user', auth.requireAuth, shared_modules_1.routes.userInfo);
+app.use('/posts', auth.requireAuth, routes_1.default.posts);
+app.use('/user', auth.requireAuth, routes_1.default.userInfo);
 app.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (req.username) {
         return res.redirect('/posts');

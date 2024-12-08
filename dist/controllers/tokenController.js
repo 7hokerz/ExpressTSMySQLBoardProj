@@ -17,42 +17,40 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const tokenService_1 = __importDefault(require("../services/tokenService"));
+const services_1 = require("../services");
 const shared_modules_1 = require("../utils/shared-modules");
-class tokenController {
+class TokenController {
+    constructor() {
+        this.tokenService = new services_1.TokenService();
+    }
     refreshToken(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             const refreshToken = req.cookies[process.env.USER_COOKIE_KEY2];
             try {
-                const { userId, username } = yield tokenService_1.default.verifyToken(refreshToken);
-                const { accessToken } = yield tokenService_1.default.generateToken(userId, username, false);
-                this.CookieHandler(req, res, process.env.USER_COOKIE_KEY, accessToken);
-                this.CookieHandler(req, res, process.env.USER_COOKIE_KEY2, refreshToken);
-                res.redirect('/posts');
+                if (!refreshToken) {
+                    res.status(401).send(`
+                    <h1>You are not Logged In</h1>
+                    <a href="/">Go Back</a>
+                `);
+                    return;
+                }
+                const { userId, username } = yield this.tokenService.verifyToken(refreshToken);
+                const { accessToken } = yield this.tokenService.generateToken(userId, username, false);
+                shared_modules_1.CookieUtil.manageCookie(req, res, process.env.USER_COOKIE_KEY, accessToken);
+                shared_modules_1.CookieUtil.manageCookie(req, res, process.env.USER_COOKIE_KEY2, refreshToken);
+                res.redirect(req.query.nextlink);
             }
             catch (error) {
                 next(error);
             }
         });
     }
-    CookieHandler(req, res, key, token, options) {
-        if (req.cookies[key]) {
-            res.clearCookie(key);
-        } // 옵션 추가도 가능하도록 설계
-        if (token) {
-            res.cookie(key, token, Object.assign({ httpOnly: true, expires: new Date(Date.now() + 3600000), sameSite: 'lax' }, options));
-        }
-    }
 }
+exports.default = TokenController;
 __decorate([
-    shared_modules_1.autoBind // 리프레시 토큰을 
-    ,
+    shared_modules_1.autoBind,
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object, Function]),
     __metadata("design:returntype", Promise)
-], tokenController.prototype, "refreshToken", null);
-exports.default = new tokenController();
+], TokenController.prototype, "refreshToken", null);

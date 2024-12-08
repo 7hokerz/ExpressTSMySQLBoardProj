@@ -1,11 +1,21 @@
 import dotenv from 'dotenv'; // 타입 및 모듈, 미들웨어 등 임포트
 dotenv.config();
 import 'reflect-metadata';
+import rateLimit from 'express-rate-limit';
 import express, { Express, Request, Response } from 'express';
 import path from 'path';
 import configExpress from './config/express';
-import { errorHandler, AuthMiddleware, routes } from './utils/shared-modules';
+import { errorHandler, AuthMiddleware } from './utils/shared-modules';
 import { ExtendedReq } from './utils/types-modules';
+import routes from './routes';
+
+
+//일정 횟수가 초과하면 오류 메시지 전송
+const limiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 10,
+    message: "요청 횟수 초과.",
+});
 
 const auth = new AuthMiddleware();
 
@@ -14,8 +24,8 @@ const app: Express = express();
 configExpress(app);
 
 app.use(auth.cookieAuth);// 토큰을 해석하여 body에 삽입
+//app.use(limiter);
 
-// 라우터
 app.use('/', routes.login);
 app.use('/uploads', auth.requireAuth, express.static(path.join(__dirname, '../uploads')));
 app.use('/posts', auth.requireAuth, routes.posts);

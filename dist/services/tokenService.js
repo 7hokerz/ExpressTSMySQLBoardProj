@@ -17,32 +17,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
-    if (kind === "m") throw new TypeError("Private method is not writable");
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
-    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
-};
-var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
-    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
-};
-var _tokenService_daofactory;
 Object.defineProperty(exports, "__esModule", { value: true });
 const shared_modules_1 = require("../utils/shared-modules");
-class tokenService {
+const daos_1 = require("../daos");
+class TokenService {
     constructor() {
-        _tokenService_daofactory.set(this, void 0);
         this.jwttoken = new shared_modules_1.jwtToken();
-        __classPrivateFieldSet(this, _tokenService_daofactory, shared_modules_1.DAOFactory.getInstance(), "f");
     }
     // 리프레시, 액세스 토큰 생성
     generateToken(userId, username, stat) {
-        var arguments_1 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_1[arguments_1.length - 1];
-            const refreshTokenDAO = __classPrivateFieldGet(this, _tokenService_daofactory, "f").createRefreshTokenDAO(connection);
+            const refreshTokenDAO = this.daofactory.getDAO(daos_1.RefreshTokenDAO);
             const token = Object.assign({ accessToken: this.jwttoken.generateAccessToken(username, userId) }, (stat ? {
                 refreshToken: this.jwttoken.generateRefreshToken(username, userId)
             } : {}));
@@ -57,10 +42,8 @@ class tokenService {
     }
     // 리프레시 토큰 검증
     verifyToken(token) {
-        var arguments_2 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_2[arguments_2.length - 1];
-            const refreshTokenDAO = __classPrivateFieldGet(this, _tokenService_daofactory, "f").createRefreshTokenDAO(connection);
+            const refreshTokenDAO = this.daofactory.getDAO(daos_1.RefreshTokenDAO);
             const storedToken = yield refreshTokenDAO.getRefreshToken(token);
             if (!storedToken || new Date(storedToken.expiresAt) < new Date()) {
                 throw new Error('Refresh token is invalid or expired');
@@ -70,17 +53,16 @@ class tokenService {
         });
     }
 }
-_tokenService_daofactory = new WeakMap();
+exports.default = TokenService;
 __decorate([
-    (0, shared_modules_1.withConnection)(false, shared_modules_1.HttpError),
+    (0, shared_modules_1.withConnection)(false),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number, String, Boolean]),
     __metadata("design:returntype", Promise)
-], tokenService.prototype, "generateToken", null);
+], TokenService.prototype, "generateToken", null);
 __decorate([
-    (0, shared_modules_1.withConnection)(false, shared_modules_1.HttpError),
+    (0, shared_modules_1.withConnection)(false),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
-], tokenService.prototype, "verifyToken", null);
-exports.default = new tokenService();
+], TokenService.prototype, "verifyToken", null);

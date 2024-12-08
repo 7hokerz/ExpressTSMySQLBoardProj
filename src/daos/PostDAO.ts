@@ -1,17 +1,15 @@
-import { Connection, PoolConnection } from 'mysql2/promise';
-import { PostDTO, PostDetailsDTO, CommentDTO, UserDTO } from '../utils/shared-modules';
+import { PoolConnection } from 'mysql2/promise';
+import { PostDTO } from '../domain/entities';
 import { RawComment, RawPost } from '../utils/types-modules';
-import { injectable, inject } from 'tsyringe';
-import { QueryService } from '../services/QueryService';
+import QueryExecutor from './QueryExecutor';
+import { IPostRepository } from '../domain/interfaces';
 
-@injectable()
-export default class PostDAO {
-    constructor(
-        connection: Connection | PoolConnection,
-        @inject(QueryService) private queryService: QueryService = new QueryService(connection)
-    ) {}
+export default class PostDAO implements IPostRepository {
+    constructor(connection: PoolConnection) {
+        QueryExecutor.initialize(connection);
+    }
 
-    async getPosts(): Promise<PostDTO[]> {
+    async getPosts(): Promise<any> {
         const query = `
             SELECT P.*, COUNT(L.like_id) AS like_count
             FROM posts P
@@ -20,19 +18,11 @@ export default class PostDAO {
             GROUP BY P.post_id
             ORDER BY created_at DESC`;
 
-        const { rows } = await this.queryService.executeQuery<PostDTO>(query);
-        
-        return rows.map((post: PostDTO) => new PostDTO(
-            post.post_id,
-            post.title,
-            null,
-            post.created_at,
-            post.like_count,
-            post.view_count,
-        ));
+        const { rows } = await QueryExecutor.executeQuery<any>(query);
+        return rows;
     }
 
-    async getPostDetails(postId: number): Promise<PostDetailsDTO | null> {
+    async getPostDetails(postId: number): Promise<any | null> {
         const postQuery = `
             SELECT P.*, U.username, 
                 (SELECT COUNT(*) 
@@ -51,55 +41,26 @@ export default class PostDAO {
         
         // 병렬 처리로 속도 개선
         const [postRow, commentRow] = await Promise.all([
-            this.queryService.executeQuery<RawPost>(postQuery, [postId]),
-            this.queryService.executeQuery<RawComment>(commentQuery, [postId])
+            QueryExecutor.executeQuery<RawPost>(postQuery, [postId]),
+            QueryExecutor.executeQuery<RawComment>(commentQuery, [postId])
         ]);
 
         const posts = postRow.rows[0];
         if(posts === null || posts === undefined) return null; 
         const comments = commentRow.rows;
 
-        return new PostDetailsDTO(
-            new PostDTO(
-                posts.post_id,
-                posts.title,
-                posts.content,
-                posts.created_at,
-                posts.like_count,
-                posts.view_count,
-                posts.imageurl,
-            ),
-            new UserDTO(
-                posts.user_id,
-                posts.username,
-            ),
-            (comments as RawComment[]).map(
-                (comment) => new CommentDTO(
-                    new UserDTO(
-                        comment.user_id,
-                        comment.username,
-                    ),
-                    comment.comment_id,
-                    comment.content,
-                    comment.created_at,
-                )
-            ),
-        );
+        return [posts, comments];
     }
 
-    async getPostDetailsYN(postId: number): Promise<UserDTO | null> {
+    async getPostDetailsYN(postId: number): Promise<any | null> {
         const query = `
         SELECT user_id
         FROM posts P
         WHERE P.post_id = ?
         FOR UPDATE`;
         
-        const { rows } = await this.queryService.executeQuery<Pick<RawPost, 'user_id'>>(query, [postId]);
-        const stat = rows[0];
-
-        if(stat === null || stat === undefined) return null;
-
-        return new UserDTO(stat.user_id);
+        const { rows } = await QueryExecutor.executeQuery<Pick<RawPost, 'user_id'>>(query, [postId]);
+        return rows[0] || null;
     }
 
     async deletePost(postId: number): Promise<void> {
@@ -107,7 +68,7 @@ export default class PostDAO {
         DELETE FROM posts 
         WHERE post_id = ?`;
 
-        const { header } = await this.queryService.executeQuery<never>(query, [postId]);
+        const { header } = await QueryExecutor.executeQuery<never>(query, [postId]);
         
         if(header.affectedRows === 0) {
             throw new Error(`Post with ID ${postId} not found`);
@@ -121,7 +82,7 @@ export default class PostDAO {
         SET title = ?, content = ? 
         WHERE post_id = ?`;
 
-        const { header } = await this.queryService.executeQuery<never>(query, [title, content, post_id]);
+        const { header } = await QueryExecutor.executeQuery<never>(query, [title, content, post_id]);
 
         if (header.affectedRows === 0) {
             throw new Error(`Post with ID ${post.post_id} not found`);
@@ -133,7 +94,7 @@ export default class PostDAO {
         const query = `
         INSERT INTO posts (user_id, title, content, imageurl) 
         VALUES (?, ?, ?, ?)`;
-        await this.queryService.executeQuery<never>(query, [userId, title, content, imageurl ?? null]);
+        await QueryExecutor.executeQuery<never>(query, [userId, title, content, imageurl ?? null]);
     }
 }
 

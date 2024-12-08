@@ -1,13 +1,14 @@
 import jwt, { Secret, TokenExpiredError } from 'jsonwebtoken';
 import { TokenPayload } from '../types/TokenPayload.types';
+import env from "../config/index";
 
 export default class JwtToken {
-    #jwtSecret: Secret; // 액세스 토큰 키
-    #refreshSecret: Secret; // 리프레시 토큰 키
+    #jwtSecret: Secret;
+    #refreshSecret: Secret;
 
-    constructor() { // 생성자 (secret 키 타입을 맞추기 위함)
-        const secret = process.env.JWT_SECRET;
-        const refreshSecret = process.env.JWT_REFRESHSECRET;
+    constructor() {
+        const secret = env.secret.secret;
+        const refreshSecret = env.secret.refreshsecret;
         if (!secret || !refreshSecret) {
             throw new Error('JWT secret key is required');
         }
@@ -17,14 +18,13 @@ export default class JwtToken {
     // username, user_id를 포함하는 jwt 생성
     public generateAccessToken(username: string, id: number): string {
         const payload: TokenPayload = { username, id };
-        return jwt.sign(payload, this.#jwtSecret, {expiresIn: '10s' });
+        return jwt.sign(payload, this.#jwtSecret, {expiresIn: '1h' });
     }
 
     public generateRefreshToken(username: string, id: number): string {
         const payload: TokenPayload = { username, id };
         return jwt.sign(payload, this.#refreshSecret, {expiresIn: '7d' });
     }
-    
     // 토큰에서 원래의 Payload 추출 및 검증 
     public verifyAccessToken(token: string): TokenPayload | null {
         try {

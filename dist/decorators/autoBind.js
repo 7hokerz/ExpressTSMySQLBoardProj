@@ -1,7 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = autobind;
-// this 바인딩 자동화 데코레이터
+/**
+ * this 바인딩 자동화 데코레이터
+ * @param {any} _
+ * @param {string} _2 - 멤버의 이름
+ * @param {PropertyDescriptor} descriptor - 프로퍼티 설명자: 프로퍼티 값과 3가지 프로퍼티 플래그
+ * @returns
+ */
 function autobind(_, _2, descriptor) {
     const originalMethod = descriptor.value;
     return {
@@ -11,7 +17,3 @@ function autobind(_, _2, descriptor) {
         },
     };
 }
-/*
-    express에서 미들웨어 함수를 쓸 때
-    this 바인딩을 자동으로 해주는 역할
- */ 

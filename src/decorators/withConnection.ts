@@ -1,28 +1,24 @@
-import { db } from '../utils/shared-modules';
+import { container } from 'tsyringe';
+import { DAOFactory } from '../daos';
+import HttpError from '../errors/HttpError';
+import TransactionError from '../errors/TransactionError';
+import Database from '../config/mysql';
 
-// DB 커넥션 데코레이터
-export function withConnection<T>(
-    manageTransaction: boolean = false, 
-    HttpError: any, 
-    TransactionError?: any
-) {
+export function withConnection<T>(manageTransaction: boolean = false) {
     return function(_: any, _2: string, descriptor: PropertyDescriptor){
         const originalMethod = descriptor.value;
-    
-        descriptor.value = async function (...args: any[]): Promise<T> {
+        descriptor.value = async function (this: any, ...args: any[]): Promise<T> {
+            const db = container.resolve(Database);
             const connection = await db.getConnection();
-            if (!connection) {
-                throw new HttpError(500, "데이터베이스 연결 실패");
-            }
-            try {
-                if(manageTransaction) await connection.beginTransaction();
-                
-                const result = await originalMethod.apply(this, [...args, connection]); 
-                // 원본 메서드 호출 (이때 connection 인자를 추가로 전달한다! 이 점은 매우 중요)
-                if(manageTransaction) await connection.commit();
+            if (!connection) throw new HttpError(500, "데이터베이스 연결 실패");
 
+            try {
+                this.daofactory = DAOFactory.getInstance(connection);
+                if(manageTransaction) await connection.beginTransaction();
+                const result = await originalMethod.apply(this, [...args]); 
+                if(manageTransaction) await connection.commit();
                 return result;
-            } catch (error) {
+            } catch (error: any) {
                 if(manageTransaction && !(error instanceof HttpError)){
                     await connection.rollback();
                     throw new TransactionError('트랜잭션 처리 중 오류.', error);
@@ -35,6 +31,8 @@ export function withConnection<T>(
         return descriptor;
     }
 }
+
+
 
 /*
     DB 연결에 관한 데코레이터

@@ -1,7 +1,9 @@
 import express from 'express';
+import { UserController } from '../controllers';
+
 const router = express.Router();
 
-import userController from '../controllers/userController';
+const userController = new UserController();
 
 // 회원정보 페이지 렌더링
 router.get('/', userController.renderUserInfoPage);

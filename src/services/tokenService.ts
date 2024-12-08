@@ -1,23 +1,17 @@
 import { 
-    DAOFactory, 
-    HttpError, 
     jwtToken,
     withConnection,
 } from "../utils/shared-modules";
+import { DAOFactory, RefreshTokenDAO } from '../daos';
 
-class tokenService {
-    #daofactory: DAOFactory;
-    private readonly jwttoken: jwtToken;
+export default class TokenService {
+    private readonly jwttoken: jwtToken = new jwtToken();
+    private daofactory!: DAOFactory;
 
-    constructor() {
-        this.jwttoken = new jwtToken();
-        this.#daofactory = DAOFactory.getInstance();
-    }
     // 리프레시, 액세스 토큰 생성
-    @withConnection(false, HttpError)
+    @withConnection(false)
     async generateToken(userId: number, username: string, stat: boolean): Promise<any> {
-        const connection = arguments[arguments.length - 1];
-        const refreshTokenDAO = this.#daofactory.createRefreshTokenDAO(connection);
+        const refreshTokenDAO = this.daofactory.getDAO(RefreshTokenDAO);
 
         const token = { // 토큰 발급
             accessToken: this.jwttoken.generateAccessToken(username, userId),
@@ -36,10 +30,9 @@ class tokenService {
         return token;
     }
     // 리프레시 토큰 검증
-    @withConnection(false, HttpError)
+    @withConnection(false)
     async verifyToken(token: string) {
-        const connection = arguments[arguments.length - 1];
-        const refreshTokenDAO = this.#daofactory.createRefreshTokenDAO(connection);
+        const refreshTokenDAO = this.daofactory.getDAO(RefreshTokenDAO);
         
         const storedToken = await refreshTokenDAO.getRefreshToken(token);
         
@@ -52,5 +45,3 @@ class tokenService {
         return { userId: payload.id, username: payload.username };
     }
 }
-
-export default new tokenService();

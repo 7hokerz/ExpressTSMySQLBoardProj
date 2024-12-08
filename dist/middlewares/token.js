@@ -33,15 +33,19 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
     return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 var _JwtToken_jwtSecret, _JwtToken_refreshSecret;
 Object.defineProperty(exports, "__esModule", { value: true });
 const jsonwebtoken_1 = __importStar(require("jsonwebtoken"));
+const index_1 = __importDefault(require("../config/index"));
 class JwtToken {
     constructor() {
-        _JwtToken_jwtSecret.set(this, void 0); // 액세스 토큰 키
-        _JwtToken_refreshSecret.set(this, void 0); // 리프레시 토큰 키
-        const secret = process.env.JWT_SECRET;
-        const refreshSecret = process.env.JWT_REFRESHSECRET;
+        _JwtToken_jwtSecret.set(this, void 0);
+        _JwtToken_refreshSecret.set(this, void 0);
+        const secret = index_1.default.secret.secret;
+        const refreshSecret = index_1.default.secret.refreshsecret;
         if (!secret || !refreshSecret) {
             throw new Error('JWT secret key is required');
         }
@@ -51,7 +55,7 @@ class JwtToken {
     // username, user_id를 포함하는 jwt 생성
     generateAccessToken(username, id) {
         const payload = { username, id };
-        return jsonwebtoken_1.default.sign(payload, __classPrivateFieldGet(this, _JwtToken_jwtSecret, "f"), { expiresIn: '10s' });
+        return jsonwebtoken_1.default.sign(payload, __classPrivateFieldGet(this, _JwtToken_jwtSecret, "f"), { expiresIn: '1h' });
     }
     generateRefreshToken(username, id) {
         const payload = { username, id };

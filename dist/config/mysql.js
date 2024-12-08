@@ -1,4 +1,13 @@
 "use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -25,26 +34,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 var _Database_pool, _Database_activeConnections;
 Object.defineProperty(exports, "__esModule", { value: true });
 const promise_1 = __importDefault(require("mysql2/promise"));
-class Database {
+const tsyringe_1 = require("tsyringe");
+const index_1 = __importDefault(require("./index"));
+let Database = class Database {
     constructor() {
         _Database_pool.set(this, void 0);
         _Database_activeConnections.set(this, new Set()); // 커넥션들을 담는 Set
         __classPrivateFieldSet(this, _Database_pool, promise_1.default.createPool({
-            host: process.env.DB_HOST,
-            port: parseInt(process.env.DB_PORT, 10),
-            user: process.env.DB_UID,
-            password: process.env.DB_PWD,
-            database: process.env.DB_DATABASE,
-            connectionLimit: 5,
+            host: index_1.default.db.host,
+            port: parseInt(index_1.default.db.port, 10),
+            user: index_1.default.db.uid,
+            password: index_1.default.db.pwd,
+            database: index_1.default.db.database,
+            connectionLimit: 10,
             enableKeepAlive: true, // Keep-Alive 활성화
             keepAliveInitialDelay: 10000, // Keep-Alive 초기 지연 (ms 단위)
         }), "f");
-    }
-    static getInstance() {
-        if (!Database.instance) {
-            Database.instance = new Database();
-        }
-        return Database.instance;
     }
     getConnection() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -55,7 +60,7 @@ class Database {
             }
             catch (error) {
                 console.error("MySQL connection error: " + error);
-                return null;
+                throw new Error;
             }
         });
     }
@@ -65,7 +70,7 @@ class Database {
             __classPrivateFieldGet(this, _Database_activeConnections, "f").delete(conn);
         }
         catch (error) {
-            console.error("MySQL release error: " + error);
+            console.error("Failed to release connection:", error);
         }
     }
     end() {
@@ -77,7 +82,7 @@ class Database {
                 yield __classPrivateFieldGet(this, _Database_pool, "f").end();
             }
             catch (error) {
-                console.error("MySQL end error: " + error);
+                console.error("Failed to close the pool:", error);
             }
         });
     }
@@ -87,10 +92,15 @@ class Database {
             return Array.from(__classPrivateFieldGet(this, _Database_activeConnections, "f"));
         });
     }
-}
-_Database_pool = new WeakMap(), _Database_activeConnections = new WeakMap();
-const db = Database.getInstance();
-exports.default = db;
+};
+_Database_pool = new WeakMap();
+_Database_activeConnections = new WeakMap();
+Database = __decorate([
+    (0, tsyringe_1.singleton)(),
+    __metadata("design:paramtypes", [])
+], Database);
+exports.default = Database;
+tsyringe_1.container.register('Database', { useClass: Database });
 /*
   DB 연결 및 종료 함수를 모듈 형식으로 반환
 

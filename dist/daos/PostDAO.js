@@ -1,16 +1,4 @@
 "use strict";
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -20,13 +8,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const shared_modules_1 = require("../utils/shared-modules");
-const tsyringe_1 = require("tsyringe");
-const QueryService_1 = require("../services/QueryService");
-let PostDAO = class PostDAO {
-    constructor(connection, queryService = new QueryService_1.QueryService(connection)) {
-        this.queryService = queryService;
+const QueryExecutor_1 = __importDefault(require("./QueryExecutor"));
+class PostDAO {
+    constructor(connection) {
+        QueryExecutor_1.default.initialize(connection);
     }
     getPosts() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -37,8 +26,8 @@ let PostDAO = class PostDAO {
             ON P.post_id = L.post_id
             GROUP BY P.post_id
             ORDER BY created_at DESC`;
-            const { rows } = yield this.queryService.executeQuery(query);
-            return rows.map((post) => new shared_modules_1.PostDTO(post.post_id, post.title, null, post.created_at, post.like_count, post.view_count));
+            const { rows } = yield QueryExecutor_1.default.executeQuery(query);
+            return rows;
         });
     }
     getPostDetails(postId) {
@@ -60,14 +49,14 @@ let PostDAO = class PostDAO {
             ORDER BY C.created_at ASC`;
             // 병렬 처리로 속도 개선
             const [postRow, commentRow] = yield Promise.all([
-                this.queryService.executeQuery(postQuery, [postId]),
-                this.queryService.executeQuery(commentQuery, [postId])
+                QueryExecutor_1.default.executeQuery(postQuery, [postId]),
+                QueryExecutor_1.default.executeQuery(commentQuery, [postId])
             ]);
             const posts = postRow.rows[0];
             if (posts === null || posts === undefined)
                 return null;
             const comments = commentRow.rows;
-            return new shared_modules_1.PostDetailsDTO(new shared_modules_1.PostDTO(posts.post_id, posts.title, posts.content, posts.created_at, posts.like_count, posts.view_count, posts.imageurl), new shared_modules_1.UserDTO(posts.user_id, posts.username), comments.map((comment) => new shared_modules_1.CommentDTO(new shared_modules_1.UserDTO(comment.user_id, comment.username), comment.comment_id, comment.content, comment.created_at)));
+            return [posts, comments];
         });
     }
     getPostDetailsYN(postId) {
@@ -77,11 +66,8 @@ let PostDAO = class PostDAO {
         FROM posts P
         WHERE P.post_id = ?
         FOR UPDATE`;
-            const { rows } = yield this.queryService.executeQuery(query, [postId]);
-            const stat = rows[0];
-            if (stat === null || stat === undefined)
-                return null;
-            return new shared_modules_1.UserDTO(stat.user_id);
+            const { rows } = yield QueryExecutor_1.default.executeQuery(query, [postId]);
+            return rows[0] || null;
         });
     }
     deletePost(postId) {
@@ -89,7 +75,7 @@ let PostDAO = class PostDAO {
             const query = `
         DELETE FROM posts 
         WHERE post_id = ?`;
-            const { header } = yield this.queryService.executeQuery(query, [postId]);
+            const { header } = yield QueryExecutor_1.default.executeQuery(query, [postId]);
             if (header.affectedRows === 0) {
                 throw new Error(`Post with ID ${postId} not found`);
             }
@@ -102,7 +88,7 @@ let PostDAO = class PostDAO {
         UPDATE posts 
         SET title = ?, content = ? 
         WHERE post_id = ?`;
-            const { header } = yield this.queryService.executeQuery(query, [title, content, post_id]);
+            const { header } = yield QueryExecutor_1.default.executeQuery(query, [title, content, post_id]);
             if (header.affectedRows === 0) {
                 throw new Error(`Post with ID ${post.post_id} not found`);
             }
@@ -114,15 +100,10 @@ let PostDAO = class PostDAO {
             const query = `
         INSERT INTO posts (user_id, title, content, imageurl) 
         VALUES (?, ?, ?, ?)`;
-            yield this.queryService.executeQuery(query, [userId, title, content, imageurl !== null && imageurl !== void 0 ? imageurl : null]);
+            yield QueryExecutor_1.default.executeQuery(query, [userId, title, content, imageurl !== null && imageurl !== void 0 ? imageurl : null]);
         });
     }
-};
-PostDAO = __decorate([
-    (0, tsyringe_1.injectable)(),
-    __param(1, (0, tsyringe_1.inject)(QueryService_1.QueryService)),
-    __metadata("design:paramtypes", [Object, QueryService_1.QueryService])
-], PostDAO);
+}
 exports.default = PostDAO;
 /*
     managePost.js의 주요 기능 설명
