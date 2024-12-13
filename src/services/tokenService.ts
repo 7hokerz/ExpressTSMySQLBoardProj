@@ -1,23 +1,20 @@
-import { 
-    DAOFactory, 
-    HttpError, 
-    jwtToken,
-    withConnection,
-} from "../utils/shared-modules";
+import { TokenUtil } from "../utils/";
+import { withDB } from "../decorators";
+import { DAOFactory, RefreshTokenDAO } from '../daos';
+import { injectable, inject } from "tsyringe";
 
-class tokenService {
-    #daofactory: DAOFactory;
-    private readonly jwttoken: jwtToken;
+@injectable()
+@withDB
+export default class TokenService {
+    private daofactory!: DAOFactory;
 
-    constructor() {
-        this.jwttoken = new jwtToken();
-        this.#daofactory = DAOFactory.getInstance();
-    }
+    constructor(
+        @inject(TokenUtil) private jwttoken: TokenUtil = new TokenUtil()
+    ) {}
+
     // 리프레시, 액세스 토큰 생성
-    @withConnection(false, HttpError)
     async generateToken(userId: number, username: string, stat: boolean): Promise<any> {
-        const connection = arguments[arguments.length - 1];
-        const refreshTokenDAO = this.#daofactory.createRefreshTokenDAO(connection);
+        const refreshTokenDAO = this.daofactory.getDAO(RefreshTokenDAO);
 
         const token = { // 토큰 발급
             accessToken: this.jwttoken.generateAccessToken(username, userId),
@@ -36,15 +33,13 @@ class tokenService {
         return token;
     }
     // 리프레시 토큰 검증
-    @withConnection(false, HttpError)
     async verifyToken(token: string) {
-        const connection = arguments[arguments.length - 1];
-        const refreshTokenDAO = this.#daofactory.createRefreshTokenDAO(connection);
+        const refreshTokenDAO = this.daofactory.getDAO(RefreshTokenDAO);
         
         const storedToken = await refreshTokenDAO.getRefreshToken(token);
         
         if(!storedToken || new Date(storedToken.expiresAt) < new Date()) {
-            throw new Error('Refresh token is invalid or expired');
+            throw new Error('만료되거나 유효하지 않은 토큰');
         }
         
         const payload = this.jwttoken.verifyRefreshToken(token);
@@ -52,5 +47,3 @@ class tokenService {
         return { userId: payload.id, username: payload.username };
     }
 }
-
-export default new tokenService();

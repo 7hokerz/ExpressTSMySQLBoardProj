@@ -1,10 +1,17 @@
 const app = require('./dist/app').default;
-const { db } = require(`./dist/utils/shared-modules`);
+const { container } = require('tsyringe');
+const { Database } = require(`./dist/utils/shared-modules`);
+const SSEUtil = require(`./dist/utils/SSEUtil`).default;
 
-(async () => { // 서버 시작 시 db 연결 점검
+const db = container.resolve(Database);
+const SSE = container.resolve(SSEUtil);
+
+(async () => { // 서버 시작 시 Database 연결 점검
     const conn = await db.getConnection();
-    if(conn) console.log("MySQL Connection is OK!");
-    await db.release(conn);
+    if(conn) {
+        console.log("MySQL Connection is OK!");
+        db.release(conn);
+    }
 })();
 
 const server = app.listen(3000, () => {
@@ -14,6 +21,7 @@ const server = app.listen(3000, () => {
 // 종료 처리
 const gracefulShutdown = async () => {
     console.log('Starting graceful shutdown...');
+    SSE.closeAllConnections();// SSE 연결 강제 종료
     server.close(async () => {
         try {
             await db.end();

@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>게시판</title>
-    <link rel="stylesheet" href="/index.css">
+    <link rel="stylesheet" href="/CSS/index.css">
 </head>
 <body>
     <div class="container">
         <h1>게시판</h1>
         <div class="actions">
-            <a href="/logout">Log Out</a>
+            <button type="button" onclick="logout()">Log Out</button>
             <a href="/user">회원정보</a>
             <a href="/posts/new">새 게시글 작성</a>
         </div>
@@ -25,5 +25,31 @@
             <% }); %>
         </div>
     </div>
+    <div id="notificationContainer" class="notification-container">
+
+    </div>
+    <script>
+        async function logout() {
+            try {
+                const res = await fetch('/logout', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json', // 클라이언트가 JSON 응답을 원함을 명시
+                    },
+                });
+                const payload = await res.json();
+
+                if (payload.ok) {
+                    window.location.replace('/login'); // 로그아웃 성공 시 로그인 페이지로 리다이렉트
+                } else {
+                    alert(`로그아웃 실패: ${payload.error.message}`);
+                }
+            } catch (error) {
+                console.error('오류 발생:', error);
+                alert('요청 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+    <script src="/JS/notification.js"></script>
 </body>
 </html>

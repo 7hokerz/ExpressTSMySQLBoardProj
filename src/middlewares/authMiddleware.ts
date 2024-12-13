@@ -1,76 +1,75 @@
-import { Request, Response, NextFunction } from 'express';
-import { jwtToken, autoBind } from '../utils/shared-modules';
+import NodeCache from 'node-cache';
+import { Response, NextFunction } from 'express';
+import { TokenUtil } from '../utils/';
+import { autoBind } from '../decorators';
 import { ExtendedReq } from '../utils/types-modules';
+import env from '../config';
+import { HttpError } from '../errors';
 
+@autoBind
 export default class AuthMiddleware {
-    #jwtService: jwtToken;
-    private readonly userCookieKey: string;
-    private readonly userCookieKey2: string;
+    private readonly memoryCache: NodeCache;
+    private readonly jwtService: TokenUtil = new TokenUtil();
+    private readonly userCookieKey: string = env.cookie.user!;
+    private readonly userCookieKey2: string = env.cookie.user2!
+    private readonly CACHE_DURATION = 15 * 60; // 15분
 
     constructor() {
-        this.#jwtService = new jwtToken();
-        this.userCookieKey = process.env.USER_COOKIE_KEY!;
-        this.userCookieKey2 = process.env.USER_COOKIE_KEY2!;
+        this.memoryCache = new NodeCache({
+            stdTTL: this.CACHE_DURATION, // 캐시 항목 기본 만료 시간
+            checkperiod: this.CACHE_DURATION + 10, // 캐시 만료 검사 주기
+        });
     }
     
     public requireAuth(req: ExtendedReq, res: Response, next: NextFunction): void {
-        if(!req.username){
-            res.status(401).send(`
-                <h1>You are not Logged In</h1>
-                <a href="/">Go Back</a>
-            `);
-            return;
+        if(!req.username || !req.user_id){
+            throw new HttpError(401, '이 페이지를 볼 권한이 없습니다.');
         }
         next();
     }
 
-    public regCheck(username: string, password: string): boolean {
-        const regex = /^[a-zA-Z0-9\s*!]+$/;//알파벳 및 공백, *, !만 허용
-        return (regex.test(username) && regex.test(password));
-    }
-
-    @autoBind
     public cookieAuth(req: ExtendedReq, res: Response, next: NextFunction): void {
-        if(req.path == '/refresh-token'){
+        if (req.path === '/refresh-token') return next();
+        
+        const token = req.cookies[this.userCookieKey];
+
+        if(!token) return next();
+        
+        const cacheUser = this.memoryCache.get(token); // 캐시 조회
+
+        if(cacheUser) {
+            const userInfo = cacheUser as { username: string, id: number };
+            req.username = userInfo.username; 
+            req.user_id = userInfo.id;
             return next();
         }
-        const token = req.cookies[this.userCookieKey];
+
+        try {
+            const payload = this.jwtService.verifyAccessToken(token);
         
-        if(token) {
-            const payload = this.#jwtService.verifyAccessToken(token);
-            
-            if(payload && payload.username !== null){
+            if(payload && payload.username){
+                this.memoryCache.set(token, { // 캐시 설정
+                    username: payload.username,
+                    id: payload.id
+                });
+
                 req.username = payload.username;
                 req.user_id = payload.id;
             }
-            else {
-                const refreshtoken = req.cookies[this.userCookieKey2];
-                if(refreshtoken){
-                    return res.redirect('/refresh-token');
-                }
+        } catch (error) {
+            if(req.cookies[this.userCookieKey2]){
+                res.redirect('/refresh-token?nextlink='+ req.path);
+                return;
             }
+            throw new HttpError(401, '토큰이 없습니다.');
         }
         next();
     }
 }
-/*
-    쿠키로부터 토큰을 획득하여,
-    토큰을 검증하고 원본을 변환한다.
-    이때 토큰이 만료된 경우 쿠키에 저장된 리프레시 토큰을 검증한다.
-    리프레시 토큰이 존재하면 이를 이용하여 액세스 토큰을 재발급 받는다.
-*/
-
-/*
-    auth.js의 주요 기능 설명
-    - requireAuth(): req.username 존재를 검증하는 접근 제어 미들웨어
-    - regCheck(): 정규식을 이용하여 문자열 검증
-    - cookieCheck(): 쿠키를 복호화
-        쿠키를 검증하여 username, id를 req 객체에 담는다.
-
-    auth.js 주요 편집 내용
-    - 
-
-    추후 수정 및 추가할 내용?
-    - 
-
-*/
+/**
+ * 쿠키로부터 토큰을 획득하여,
+ * 토큰을 검증하고 원본을 변환한다.
+ * 이때 토큰이 만료된 경우 쿠키에 저장된 리프레시 토큰을 검증한다.
+ * 
+ * 
+ */

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Create New Post</title>
-  <link rel="stylesheet" href="/newPost.css">
+  <link rel="stylesheet" href="/CSS/newPost.css">
 </head>
 <body>
   <header>
@@ -22,46 +22,24 @@
       </div>
       <div>
         <label for="img">이미지:</label>
-        <img id="uploadedImage" src="" alt="Uploaded Image" style="max-width: 300px; display: none;" />
+        <img id="uploadedImage" src="" loading="lazy" alt="Uploaded Image" style="max-width: 300px; display: none;" />
       </div>
       <input type="hidden" id="imageurl" name="imageurl" />
       <button type="submit">제출하기</button>
     </form>
     <form id="uploadForm" enctype="multipart/form-data">
       <div>
-        <input type="file" name="image" />
+        <input type="file" name="image" required/>
       </div>
       <div>
-        <label for="title">파일 이름:</label>
-        <input type="text" name="title" required/>
+        <label for="fileName">파일 이름:</label>
+        <input type="text" name="fileName" required/>
       </div>
       <button type="submit">업로드하기</button>
     </form>
-    <script>
-      document.getElementById('uploadForm').addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        const form = event.target;
-        const formData = new FormData(form);// 폼 데이터를 수집
-
-        // 서버에 파일 업로드 요청
-        const response = await fetch('/posts/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        const result = await response.json();
-        console.log(result.imageUrl);
-        if (response.ok) {// 업로드된 이미지 경로 설정
-          const uploadedImage = document.getElementById('uploadedImage');
-          uploadedImage.src = result.imageUrl;
-          uploadedImage.style.display = 'block'; // 이미지를 화면에 표시
-          document.getElementById('imageurl').value = result.imageUrl;
-        } else {
-          alert('File upload failed.');
-        }
-      });
-    </script>
+    
+    <script src="/JS/uploadImage.js"></script>
+    
   </main>
 </body>
 </html>

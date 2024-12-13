@@ -1,20 +1,17 @@
-import { Connection, PoolConnection } from "mysql2/promise";
-import { injectable, inject } from 'tsyringe';
-import { QueryService } from '../services/QueryService';
+import { ILikeRepository } from '../domain/interfaces/';
+import QueryExecutor from './QueryExecutor';
+import { PoolConnection } from 'mysql2/promise';
 
-@injectable()
-export default class LikeDAO {
-    constructor(
-        connection: Connection | PoolConnection,
-        @inject(QueryService) private queryService: QueryService = new QueryService(connection)
-    ) {}
+export default class LikeDAO implements ILikeRepository {
+    constructor(connection: PoolConnection) {
+        QueryExecutor.initialize(connection);
+    }
 
     async getLikeYN(userId: number, postId: number): Promise<string> {
         const query = `
         SELECT 1 FROM postLike
         WHERE user_id = ? AND post_id = ?`;
-        const { rows } = await this.queryService.executeQuery<any>(query, [userId, postId]);
-
+        const { rows } = await QueryExecutor.executeQuery(query, [userId, postId]);
         return rows.length > 0 ? "deleteLike" : "like";
     }
 
@@ -23,7 +20,7 @@ export default class LikeDAO {
         INSERT INTO postLike
         (user_id, post_id) VALUES (?, ?)`;
 
-        const { header } = await this.queryService.executeQuery<never>(query, [userId, postId]);
+        const { header } = await QueryExecutor.executeQuery(query, [userId, postId]);
 
         if (header.affectedRows === 0) {
             throw new Error(`Post with ID ${postId} not found`);
@@ -35,7 +32,7 @@ export default class LikeDAO {
         DELETE FROM postLike
         WHERE user_id = ? AND post_id = ?`;
         
-        const { header } = await this.queryService.executeQuery<never>(query, [userId, postId]);
+        const { header } = await QueryExecutor.executeQuery(query, [userId, postId]);
 
         if (header.affectedRows === 0) {
             throw new Error(`Post with ID ${postId} not found`);
@@ -47,7 +44,7 @@ export default class LikeDAO {
         DELETE FROM postLike 
         WHERE post_id = ?`;
 
-        const { header } = await this.queryService.executeQuery<never>(query, [postId]);
+        const { header } = await QueryExecutor.executeQuery(query, [postId]);
 
         //if (header.affectedRows === 0) {
             //throw new Error(`Post with ID ${postId} not found`);
