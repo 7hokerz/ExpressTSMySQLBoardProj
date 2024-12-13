@@ -17,73 +17,69 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
-    if (kind === "m") throw new TypeError("Private method is not writable");
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
-    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
-    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
-};
-var _postService_daofactory;
 Object.defineProperty(exports, "__esModule", { value: true });
-const shared_modules_1 = require("../utils/shared-modules");
-class postService {
-    constructor() {
-        _postService_daofactory.set(this, void 0);
-        __classPrivateFieldSet(this, _postService_daofactory, shared_modules_1.DAOFactory.getInstance(), "f");
-    }
+const decorators_1 = require("../decorators");
+const errors_1 = require("../errors");
+const entities_1 = require("../domain/entities");
+const daos_1 = require("../daos");
+const promises_1 = __importDefault(require("fs/promises"));
+const path_1 = __importDefault(require("path"));
+let PostService = class PostService {
     posts() {
-        var arguments_1 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_1[arguments_1.length - 1];
-            const postDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createPostDAO(connection);
-            return yield postDAO.getPosts();
+            const postDAO = this.daofactory.getDAO(daos_1.PostDAO);
+            const posts = yield postDAO.getPosts();
+            return posts.map((post) => new entities_1.PostDTO(post.post_id, post.title, post.content, post.created_at, post.like_count, post.view_count));
         });
     }
     newpost(post, user_id) {
-        var arguments_2 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_2[arguments_2.length - 1];
-            const postDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createPostDAO(connection);
+            const postDAO = this.daofactory.getDAO(daos_1.PostDAO);
             yield postDAO.createPost(post, user_id);
         });
     }
     postdetail(postId, userId) {
-        var arguments_3 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_3[arguments_3.length - 1];
-            const postDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createPostDAO(connection);
-            const likeDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createLikeDAO(connection);
+            const postDAO = this.daofactory.getDAO(daos_1.PostDAO);
+            const likeDAO = this.daofactory.getDAO(daos_1.LikeDAO);
             const [postData, stat] = yield Promise.all([
                 postDAO.getPostDetails(postId),
                 likeDAO.getLikeYN(userId, postId)
             ]);
             if (!postData) {
-                throw new shared_modules_1.HttpError(404, 'Post Not Found');
+                throw new errors_1.HttpError(404, 'Post Not Found');
             }
-            // 기존 post 객체에 stat 속성 추가
-            postData.post = Object.assign(Object.assign({}, postData.post), { // 기존 속성 유지
-                stat });
-            return postData;
+            const { posts, comments } = postData;
+            return new entities_1.PostDetailsDTO(new entities_1.PostDTO(posts.post_id, posts.title, posts.content, posts.created_at, posts.like_count, posts.view_count, posts.imageurl, stat), new entities_1.UserDTO(posts.user_id, posts.username), comments.map((comment) => new entities_1.CommentDTO(new entities_1.UserDTO(comment.user_id, comment.username), comment.comment_id, comment.content, comment.created_at)));
         });
     }
     deletepost(postId, userId) {
-        var arguments_4 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_4[arguments_4.length - 1];
-            const postDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createPostDAO(connection);
-            const likeDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createLikeDAO(connection);
-            const commentDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createCommentDAO(connection);
+            const postDAO = this.daofactory.getDAO(daos_1.PostDAO);
+            const likeDAO = this.daofactory.getDAO(daos_1.LikeDAO);
+            const commentDAO = this.daofactory.getDAO(daos_1.ReplyDAO);
             const post = yield postDAO.getPostDetailsYN(postId);
             if (post === null || post === undefined) {
-                throw new shared_modules_1.HttpError(404, 'Post Not Found');
+                throw new errors_1.HttpError(404, 'Post Not Found');
             }
             if (post.user_id !== userId) {
-                throw new shared_modules_1.HttpError(401, '게시글 작성자만 삭제할 수 있습니다.');
+                throw new errors_1.HttpError(401, '게시글 작성자만 삭제할 수 있습니다.');
+            }
+            if (post.imageurl) {
+                try {
+                    const imagePath = path_1.default.join(process.cwd(), post.imageurl);
+                    // 파일 존재 확인
+                    yield promises_1.default.access(imagePath);
+                    // 파일 삭제
+                    yield promises_1.default.unlink(imagePath);
+                }
+                catch (error) {
+                    console.log(`이미지가 없음.`, error);
+                    throw new Error;
+                }
             }
             yield likeDAO.deleteLikeAll(postId);
             yield commentDAO.deleteCommentAll(postId);
@@ -91,13 +87,11 @@ class postService {
         });
     }
     updatepost(post_id, userId, title, content) {
-        var arguments_5 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_5[arguments_5.length - 1];
-            const postDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createPostDAO(connection);
+            const postDAO = this.daofactory.getDAO(daos_1.PostDAO);
             const post = yield postDAO.getPostDetailsYN(post_id);
             if ((post !== null && post !== undefined) && post.user_id !== userId) {
-                throw new shared_modules_1.HttpError(401, '게시글 작성자만 수정할 수 있습니다.');
+                throw new errors_1.HttpError(401, '게시글 작성자만 수정할 수 있습니다.');
             }
             if (post !== null && post !== undefined) {
                 const update = { post_id, title, content };
@@ -106,123 +100,60 @@ class postService {
         });
     }
     renderUpdate(postId, userId) {
-        var arguments_6 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_6[arguments_6.length - 1];
-            const postDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createPostDAO(connection);
-            const postData = yield postDAO.getPostDetails(postId);
-            if (!postData) {
-                throw new shared_modules_1.HttpError(404, 'Post Not Found');
+            const postDAO = this.daofactory.getDAO(daos_1.PostDAO);
+            const [posts] = yield postDAO.getPostDetails(postId);
+            if (!posts) {
+                throw new errors_1.HttpError(404, '게시글이 없습니다.');
             }
-            if (postData.postUser.user_id !== userId) {
-                throw new shared_modules_1.HttpError(401, '게시글 작성자만 수정할 수 있습니다.');
+            if (posts.user_id !== userId) {
+                throw new errors_1.HttpError(401, '게시글 작성자만 수정할 수 있습니다.');
             }
-            return postData.post;
+            return new entities_1.PostDTO(posts.post_id, posts.title, posts.content, posts.created_at, posts.like_count, posts.view_count, posts.imageurl);
         });
     }
     like(postId, userId) {
-        var arguments_7 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_7[arguments_7.length - 1];
-            const likeDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createLikeDAO(connection);
+            const likeDAO = this.daofactory.getDAO(daos_1.LikeDAO);
             yield likeDAO.updateLike(userId, postId);
         });
     }
     unlike(postId, userId) {
-        var arguments_8 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_8[arguments_8.length - 1];
-            const likeDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createLikeDAO(connection);
+            const likeDAO = this.daofactory.getDAO(daos_1.LikeDAO);
             yield likeDAO.deleteLike(userId, postId);
         });
     }
     comment(postId, userId, content) {
-        var arguments_9 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_9[arguments_9.length - 1];
-            const commentDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createCommentDAO(connection);
+            const commentDAO = this.daofactory.getDAO(daos_1.ReplyDAO);
+            const postDAO = this.daofactory.getDAO(daos_1.PostDAO);
             yield commentDAO.createComment(postId, userId, content);
+            const { user_id } = yield postDAO.getPostDetailsYN(postId);
+            return new entities_1.UserDTO(user_id);
         });
     }
     deletecomment(commentId, userId) {
-        var arguments_10 = arguments;
         return __awaiter(this, void 0, void 0, function* () {
-            const connection = arguments_10[arguments_10.length - 1];
-            const commentDAO = __classPrivateFieldGet(this, _postService_daofactory, "f").createCommentDAO(connection);
+            const commentDAO = this.daofactory.getDAO(daos_1.ReplyDAO);
             const pubId = yield commentDAO.getComment(commentId);
             if (!pubId) {
-                throw new shared_modules_1.HttpError(404, 'Comment Not Found');
+                throw new errors_1.HttpError(404, '댓글이 없습니다.');
             }
             if (pubId.user_id !== userId) {
-                throw new shared_modules_1.HttpError(401, '댓글 작성자만 삭제할 수 있습니다.');
+                throw new errors_1.HttpError(401, '댓글 작성자만 삭제할 수 있습니다.');
             }
             yield commentDAO.deleteComment(commentId);
         });
     }
-}
-_postService_daofactory = new WeakMap();
+};
 __decorate([
-    (0, shared_modules_1.withConnection)(false, shared_modules_1.HttpError),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
-], postService.prototype, "posts", null);
-__decorate([
-    (0, shared_modules_1.withConnection)(false, shared_modules_1.HttpError),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [shared_modules_1.PostDTO, Number]),
-    __metadata("design:returntype", Promise)
-], postService.prototype, "newpost", null);
-__decorate([
-    (0, shared_modules_1.withConnection)(false, shared_modules_1.HttpError),
+    decorators_1.Transaction,
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", Promise)
-], postService.prototype, "postdetail", null);
-__decorate([
-    (0, shared_modules_1.withConnection)(true, shared_modules_1.HttpError, shared_modules_1.TransactionError),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number]),
-    __metadata("design:returntype", Promise)
-], postService.prototype, "deletepost", null);
-__decorate([
-    (0, shared_modules_1.withConnection)(false, shared_modules_1.HttpError),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number, String, String]),
-    __metadata("design:returntype", Promise)
-], postService.prototype, "updatepost", null);
-__decorate([
-    (0, shared_modules_1.withConnection)(false, shared_modules_1.HttpError),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number]),
-    __metadata("design:returntype", Promise)
-], postService.prototype, "renderUpdate", null);
-__decorate([
-    (0, shared_modules_1.withConnection)(false, shared_modules_1.HttpError),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number]),
-    __metadata("design:returntype", Promise)
-], postService.prototype, "like", null);
-__decorate([
-    (0, shared_modules_1.withConnection)(false, shared_modules_1.HttpError),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number]),
-    __metadata("design:returntype", Promise)
-], postService.prototype, "unlike", null);
-__decorate([
-    (0, shared_modules_1.withConnection)(false, shared_modules_1.HttpError),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number, String]),
-    __metadata("design:returntype", Promise)
-], postService.prototype, "comment", null);
-__decorate([
-    (0, shared_modules_1.withConnection)(false, shared_modules_1.HttpError),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number]),
-    __metadata("design:returntype", Promise)
-], postService.prototype, "deletecomment", null);
-exports.default = new postService();
-/*
-    
-
-*/ 
+], PostService.prototype, "deletepost", null);
+PostService = __decorate([
+    decorators_1.withDB
+], PostService);
+exports.default = PostService;

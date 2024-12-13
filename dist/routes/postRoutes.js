@@ -4,31 +4,26 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const router = express_1.default.Router(); //특정 경로에 대한, 모듈화된 라우팅 구현
-const postController_1 = __importDefault(require("../controllers/postController"));
-const uploadRouter = require(`../../routes/imageRoutes`);
-//일정 횟수가 초과하면 오류 메시지 전송
-const limiter = (0, express_rate_limit_1.default)({
-    windowMs: 1 * 60 * 1000,
-    max: 10,
-    message: "요청 횟수 초과.",
-});
-router.use('/upload', uploadRouter); // 이미지 업로드에 대한 라우터
-router.get('/', postController_1.default.posts); // 게시글 목록 페이지 렌더링
+const controllers_1 = require("../controllers");
+const imageRoutes_1 = __importDefault(require("./imageRoutes"));
+const router = express_1.default.Router();
+const postController = new controllers_1.PostController();
+router.use('/upload', imageRoutes_1.default); // 이미지 업로드에 대한 라우터
+router.get('/', postController.posts); // 게시글 목록 페이지 렌더링
 router.route('/new') // 게시글 작성 페이지 렌더링 및 게시글 작성 요청 라우터
     .get((req, res) => { res.render('newPost'); })
-    .post(postController_1.default.newpost);
+    .post(postController.newpost);
 router.route('/:postId') // 게시글 세부 페이지 렌더링 및 게시글 삭제 요청 라우터
-    .get(postController_1.default.postdetail)
-    .delete(postController_1.default.deletepost);
+    .get(/*imageCacheMiddleware,*/ postController.postdetail)
+    .delete(postController.deletepost);
 router.route('/:postId/update') // 게시글 수정 페이지 렌더링 및 게시글 수정 라우터
-    .get(postController_1.default.renderUpdate)
-    .put(postController_1.default.updatepost);
-router.post('/:postId/like', limiter, postController_1.default.like); // 좋아요 기능 라우터
-router.post('/:postId/deleteLike', postController_1.default.unlike); // 좋아요 취소 기능 라우터
-router.post('/:postId/commentCreate', postController_1.default.comment); // 댓글 생성 라우터
-router.delete('/:postId/deleteComment/:commentId', postController_1.default.deletecomment); // 댓글 삭제 라우터
+    .get(postController.renderUpdate)
+    .put(postController.updatepost);
+router.post('/:postId/like', postController.like); // 좋아요 기능 라우터
+router.post('/:postId/deleteLike', postController.unlike); // 좋아요 취소 기능 라우터
+router.post('/:postId/comment', postController.comment); // 댓글 생성 라우터
+router.delete('/:postId/comment/:commentId', postController.deletecomment); // 댓글 삭제 라우터
+router.get('/notifications/stream', postController.sse);
 exports.default = router;
 /*
     posts.js의 주요 기능 설명

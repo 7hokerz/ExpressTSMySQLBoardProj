@@ -15,12 +15,21 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
     if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
     if (kind === "m") throw new TypeError("Private method is not writable");
@@ -40,7 +49,8 @@ var _JwtToken_jwtSecret, _JwtToken_refreshSecret;
 Object.defineProperty(exports, "__esModule", { value: true });
 const jsonwebtoken_1 = __importStar(require("jsonwebtoken"));
 const index_1 = __importDefault(require("../config/index"));
-class JwtToken {
+const tsyringe_1 = require("tsyringe");
+let JwtToken = class JwtToken {
     constructor() {
         _JwtToken_jwtSecret.set(this, void 0);
         _JwtToken_refreshSecret.set(this, void 0);
@@ -68,7 +78,7 @@ class JwtToken {
         }
         catch (error) {
             if (error instanceof jsonwebtoken_1.TokenExpiredError) {
-                //console.error('Token expired:', error.message);
+                console.error('Token expired:', error.message);
             }
             else if (error instanceof Error) {
                 console.error('Token verification failed:', error.message);
@@ -85,8 +95,13 @@ class JwtToken {
             throw new Error('Invalid or expired refresh token');
         }
     }
-}
-_JwtToken_jwtSecret = new WeakMap(), _JwtToken_refreshSecret = new WeakMap();
+};
+_JwtToken_jwtSecret = new WeakMap();
+_JwtToken_refreshSecret = new WeakMap();
+JwtToken = __decorate([
+    (0, tsyringe_1.singleton)(),
+    __metadata("design:paramtypes", [])
+], JwtToken);
 exports.default = JwtToken;
 /*
     TokenPayload 인터페이스

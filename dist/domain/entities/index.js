@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.UserDTO = exports.CommentDTO = exports.PostDetailsDTO = exports.PostDTO = void 0;
+const PostDTO_1 = require("./PostDTO");
+Object.defineProperty(exports, "PostDTO", { enumerable: true, get: function () { return PostDTO_1.PostDTO; } });
+const PostDetailsDTO_1 = require("./PostDetailsDTO");
+Object.defineProperty(exports, "PostDetailsDTO", { enumerable: true, get: function () { return PostDetailsDTO_1.PostDetailsDTO; } });
+const CommentDTO_1 = require("./CommentDTO");
+Object.defineProperty(exports, "CommentDTO", { enumerable: true, get: function () { return CommentDTO_1.CommentDTO; } });
+const UserDTO_1 = require("./UserDTO");
+Object.defineProperty(exports, "UserDTO", { enumerable: true, get: function () { return UserDTO_1.UserDTO; } });

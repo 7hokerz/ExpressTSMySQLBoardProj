@@ -8,49 +8,56 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.withConnection = withConnection;
-const shared_modules_1 = require("../utils/shared-modules");
-// DB 커넥션 데코레이터
-function withConnection(manageTransaction = false, HttpError, TransactionError) {
+const tsyringe_1 = require("tsyringe");
+const daos_1 = require("../daos");
+const errors_1 = require("../errors");
+const mysql_1 = __importDefault(require("../config/mysql"));
+function withConnection(Transaction = false) {
     return function (_, _2, descriptor) {
         const originalMethod = descriptor.value;
         descriptor.value = function (...args) {
             return __awaiter(this, void 0, void 0, function* () {
-                const connection = yield shared_modules_1.db.getConnection();
-                if (!connection) {
-                    throw new HttpError(500, "데이터베이스 연결 실패");
-                }
+                const db = tsyringe_1.container.resolve(mysql_1.default);
+                const connection = yield db.getConnection();
+                if (!connection)
+                    throw new errors_1.HttpError(500, "데이터베이스 연결 실패");
                 try {
-                    if (manageTransaction)
+                    this.daofactory = daos_1.DAOFactory.getInstance(connection);
+                    if (Transaction)
                         yield connection.beginTransaction();
-                    const result = yield originalMethod.apply(this, [...args, connection]);
-                    // 원본 메서드 호출 (이때 connection 인자를 추가로 전달한다! 이 점은 매우 중요)
-                    if (manageTransaction)
+                    const result = yield originalMethod.apply(this, [...args]);
+                    if (Transaction)
                         yield connection.commit();
                     return result;
                 }
                 catch (error) {
-                    if (manageTransaction && !(error instanceof HttpError)) {
+                    if (Transaction) {
                         yield connection.rollback();
-                        throw new TransactionError('트랜잭션 처리 중 오류.', error);
+                        throw new errors_1.HttpError(500, '트랜잭션 처리 중 오류.');
                     }
                     throw error;
                 }
                 finally {
-                    shared_modules_1.db.release(connection); // 연결 해제
+                    db.release(connection); // 연결 해제
                 }
             });
         };
         return descriptor;
     };
 }
-/*
-    DB 연결에 관한 데코레이터
-    
-    DB 연결 및 해제를 자동화하고
-    상황에 따라 트랜잭션도 자동화할 수 있다.
-
-    커넥션을 데코레이터에서 생성하고 해제하므로
-    역할 분리가 가능
-*/ 
+/**
+ * DB의 커넥션 연결 및 해제 역할을 담당하는 데코레이터
+ *
+ * - DB 객체는 의존성 주입
+ *
+ * - DAOFactory 객체 주입 (개별 DAO는 서비스 레이어에서 생성)
+ *
+ * - 선택적인 트랜잭션 기능
+ *
+ *
+ */ 
