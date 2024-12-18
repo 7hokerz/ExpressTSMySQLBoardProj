@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>게시판</title>
-    <link rel="stylesheet" href="/index.css">
+    <link rel="stylesheet" href="/CSS/index.css">
 </head>
 <body>
     <div class="container">
@@ -24,64 +24,21 @@
                 </div>
             <% }); %>
         </div>
+        <div class="pagination">
+            <% if (currentPage > 1) { %>
+                <a href="?page=<%= currentPage - 1 %>">이전</a>
+            <% } %>
+            <% for(let i = 1; i <= totalPages; i++) { %>
+                <a href="?page=<%= i %>" <%= currentPage == i ? 'class="active"' :  '' %>>
+                <%= i %></a>
+            <% } %>
+            <% if (currentPage < totalPages) { %>
+                <a href="?page=<%= currentPage + 1 %>">다음</a>
+            <% } %>
+        </div>
     </div>
-    <div id="notificationContainer" class="notification-container">
-
-    </div>
-    <script>
-        async function logout() {
-            try {
-                const res = await fetch('/logout', {
-                    method: 'GET',
-                });
-                const payload = await res.json();
-
-                if (payload.ok) {
-                    window.location.replace('/login'); // 로그아웃 성공 시 로그인 페이지로 리다이렉트
-                } else {
-                    alert(`로그아웃 실패: ${payload.error.message}`);
-                }
-            } catch (error) {
-                console.error('오류 발생:', error);
-                alert('요청 중 오류가 발생했습니다.');
-            }
-        }
-
-        const notificationContainer = document.getElementById('notificationContainer');
-
-        const eventSource = new EventSource('/posts/notifications/stream');
-
-        eventSource.onmessage = (event) => {
-            const comment = JSON.parse(event.data);
-            showNotification(`New comment: ${comment.content}`);
-        }
-
-        function showNotification(message) {
-            const notification = document.createElement('div');
-            notification.className = 'notification';
-            notification.innerHTML = `
-                <span>${message}</span>
-                <button class="close-btn" onclick="this.parentElement.remove()">×</button>
-            `;
-
-            notificationContainer.appendChild(notification);
-
-            setTimeout(() => notification.remove(), 10000);
-        }
-
-        eventSource.addEventListener('close', (event) => {
-            console.log('Server closed the connection');
-            eventSource.close();
-        });
-
-        // 페이지를 떠날 때 SSE 종료
-        window.addEventListener('beforeunload', () => {
-            if (eventSource) {
-                eventSource.close();
-                console.log('SSE connection closed');
-            }
-        });
-
-    </script>
+    <div id="notificationContainer" class="notification-container"></div>
+    <script src="/JS/logout.js"></script>
+    <script src="/JS/notification.js"></script>
 </body>
 </html>

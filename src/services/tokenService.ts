@@ -1,15 +1,18 @@
-import { 
-    jwtToken,
-    withConnection,
-} from "../utils/shared-modules";
+import { injectable, inject } from "tsyringe";
+import { TokenUtil } from "../utils/";
+import { withDB } from "../decorators";
 import { DAOFactory, RefreshTokenDAO } from '../daos';
 
+@injectable()
+@withDB
 export default class TokenService {
-    private readonly jwttoken: jwtToken = new jwtToken();
     private daofactory!: DAOFactory;
 
+    constructor(
+        @inject(TokenUtil) private jwttoken: TokenUtil
+    ) {}
+
     // 리프레시, 액세스 토큰 생성
-    @withConnection(false)
     async generateToken(userId: number, username: string, stat: boolean): Promise<any> {
         const refreshTokenDAO = this.daofactory.getDAO(RefreshTokenDAO);
 
@@ -30,14 +33,13 @@ export default class TokenService {
         return token;
     }
     // 리프레시 토큰 검증
-    @withConnection(false)
     async verifyToken(token: string) {
         const refreshTokenDAO = this.daofactory.getDAO(RefreshTokenDAO);
         
         const storedToken = await refreshTokenDAO.getRefreshToken(token);
         
         if(!storedToken || new Date(storedToken.expiresAt) < new Date()) {
-            throw new Error('Refresh token is invalid or expired');
+            throw new Error('만료되거나 유효하지 않은 토큰');
         }
         
         const payload = this.jwttoken.verifyRefreshToken(token);

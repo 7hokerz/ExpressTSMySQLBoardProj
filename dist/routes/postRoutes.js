@@ -4,24 +4,25 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const tsyringe_1 = require("tsyringe");
 const controllers_1 = require("../controllers");
 const imageRoutes_1 = __importDefault(require("./imageRoutes"));
-const imageCacheMiddleware_1 = require("../middlewares/imageCacheMiddleware");
 const router = express_1.default.Router();
-const postController = new controllers_1.PostController();
+const postController = tsyringe_1.container.resolve(controllers_1.PostController);
 router.use('/upload', imageRoutes_1.default); // 이미지 업로드에 대한 라우터
-router.get('/', postController.posts); // 게시글 목록 페이지 렌더링
+router.get('/', postController.paginatedPosts); // 게시글 목록 페이지 렌더링
 router.route('/new') // 게시글 작성 페이지 렌더링 및 게시글 작성 요청 라우터
     .get((req, res) => { res.render('newPost'); })
     .post(postController.newpost);
 router.route('/:postId') // 게시글 세부 페이지 렌더링 및 게시글 삭제 요청 라우터
-    .get(imageCacheMiddleware_1.imageCacheMiddleware, postController.postdetail)
+    .get(postController.postdetail)
     .delete(postController.deletepost);
 router.route('/:postId/update') // 게시글 수정 페이지 렌더링 및 게시글 수정 라우터
     .get(postController.renderUpdate)
     .put(postController.updatepost);
 router.post('/:postId/like', postController.like); // 좋아요 기능 라우터
-router.post('/:postId/deleteLike', postController.unlike); // 좋아요 취소 기능 라우터
+router.delete('/:postId/like', postController.unlike); // 좋아요 취소 기능 라우터
+//router.post('/:postId/deleteLike', postController.unlike); // 좋아요 취소 기능 라우터
 router.post('/:postId/comment', postController.comment); // 댓글 생성 라우터
 router.delete('/:postId/comment/:commentId', postController.deletecomment); // 댓글 삭제 라우터
 router.get('/notifications/stream', postController.sse);

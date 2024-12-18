@@ -16,18 +16,19 @@ class QueryExecutor {
     /**
      * 쿼리에 대한 결과를 반환하는 메서드
      * @param {string} query - 쿼리문
-     * @param {any[]} [params] - 데이터 (선택적)
-     * @returns {Promise<QueryResult<T>>} - 쿼리에 대한 결과
+     * @param {any[]} [params] - 파라미터 (선택적)
+     * @returns {Promise<QueryResult>} - 쿼리에 대한 결과
      */
-    static executeQuery(query, params) {
-        return __awaiter(this, void 0, void 0, function* () {
-            params = params || [];
+    static executeQuery(query_1) {
+        return __awaiter(this, arguments, void 0, function* (query, params = []) {
+            //const startTime = Date.now();
             const [rows, fields] = yield this.connection.execute(query, params);
+            //const duration = Date.now() - startTime;
+            //console.log(`Execution time: ${duration}ms`);
             return {
-                rows: rows, // 쿼리 결과 행 데이터를 제네릭 타입 배열로 캐스팅
-                header: rows // 결과 헤더 정보(예: INSERT/UPDATE의 메타 데이터)
+                rows: rows, // SELECT 쿼리의 결과
+                header: rows // INSERT, UPDATE 등 메타데이터
             };
-            // 결과로 반환되는 헤더는 여러가지 정보를 포함
             // 그 중 affectedRows는 변경된 행의 개수 반환
         });
     }

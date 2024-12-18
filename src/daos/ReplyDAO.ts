@@ -13,7 +13,7 @@ export default class CommentDAO implements ICommentRepository {
         SELECT user_id FROM comments
         WHERE comment_id = ?`;
 
-        const { rows } = await QueryExecutor.executeQuery<Pick<RawComment, "user_id">>(query, [commentId]);
+        const { rows } = await QueryExecutor.executeQuery(query, [commentId]);
 
         return rows[0] || null;
     }
@@ -23,7 +23,7 @@ export default class CommentDAO implements ICommentRepository {
         INSERT INTO comments (post_id, user_id, content) 
         VALUES (?, ?, ?)`;
 
-        await QueryExecutor.executeQuery<never>(query, [postId, userId, content]);
+        await QueryExecutor.executeQuery(query, [postId, userId, content]);
     }
 
     async deleteComment(commentId: number): Promise<void> {
@@ -31,7 +31,7 @@ export default class CommentDAO implements ICommentRepository {
         DELETE FROM comments 
         WHERE comment_id = ?`;
 
-        await QueryExecutor.executeQuery<never>(query, [commentId]);
+        await QueryExecutor.executeQuery(query, [commentId]);
     }
     
     async deleteCommentAll(postId: number): Promise<void> {
@@ -39,6 +39,6 @@ export default class CommentDAO implements ICommentRepository {
         DELETE FROM comments 
         WHERE post_id = ?`;
 
-        await QueryExecutor.executeQuery<never>(query, [postId]);
+        await QueryExecutor.executeQuery(query, [postId]);
     }
 }

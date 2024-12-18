@@ -17,7 +17,7 @@ export default class UserDAO implements IUserRepository {
         SELECT * FROM users 
         WHERE username = ?`;
 
-        const { rows } = await QueryExecutor.executeQuery<any>(query, [username]);
+        const { rows } = await QueryExecutor.executeQuery(query, [username]);
 
         return rows[0] || null;
     }
@@ -27,7 +27,7 @@ export default class UserDAO implements IUserRepository {
         INSERT INTO users (username, password) 
         VALUES (?, ?)`;
         
-        await QueryExecutor.executeQuery<never>(query, [newUser.username, newUser.password]);
+        await QueryExecutor.executeQuery(query, [newUser.username, newUser.password]);
     }
 
     async removeUser(user_id: number): Promise<void> {
@@ -35,7 +35,7 @@ export default class UserDAO implements IUserRepository {
         DELETE FROM users 
         WHERE id = ?`;
 
-        await QueryExecutor.executeQuery<never>(query, [user_id]);
+        await QueryExecutor.executeQuery(query, [user_id]);
     }
     
     async editUser(curUserId: number, editUser: UserType): Promise<void> {
@@ -44,7 +44,7 @@ export default class UserDAO implements IUserRepository {
         SET username = ?, password = ? 
         WHERE id = ?`;
 
-        await QueryExecutor.executeQuery<never>(query, 
+        await QueryExecutor.executeQuery(query, 
             [editUser.username, editUser.password, curUserId]);
     }
 }

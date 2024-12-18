@@ -6,11 +6,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.upload = void 0;
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
-const types_modules_1 = require("../utils/types-modules");
+const types_1 = require("../types");
 // 이미지 파일 유형 검증
 const fileFilter = (req, file, cb) => {
     const fileExtension = path_1.default.extname(file.originalname).toLocaleLowerCase().slice(1);
-    if (Object.values(types_modules_1.ImageType).includes(fileExtension)) {
+    if (Object.values(types_1.ImageType).includes(fileExtension)) {
         cb(null, true);
     }
     else

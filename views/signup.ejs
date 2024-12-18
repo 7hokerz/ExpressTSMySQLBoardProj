@@ -3,29 +3,43 @@
 <html lang="en">
 <head>
     <title>Sign Up</title>
-    <link rel="stylesheet" href="/signup.css">
+    <link rel="stylesheet" href="/CSS/signup.css">
+    <script src="/JS/Signup.js"></script>
 </head>
 <body>
     <header>
         <h1>회원가입</h1>
-        <p>유의사항: 알파벳, 숫자 및 공백, *, !만 허용</p>
+        <p>유의사항: 알파벳, 숫자 및 공백, *, !만 허용, 2자 이상</p>
     </header>
     <main>
-        <form method="POST" action="/signup">
+        <div class="signup-box">
+            <div>
+                <label for="username">Username: </label>
+                <input type="text" id="username" autocomplete="off"/>
+            </div>
+            <div>
+                <label for="password">Password: </label>
+                <input type="password" id="password" />
+            </div>
+            <button type="button" onclick="signup()">Sign Up</button>
+        </div>
+    </main>
+</body>
+</html>
+
+<!--
+<form method="POST" action="/signup">
             <div>
                 <label for="username">Username: </label><input type="text" name="username" required/>
             </div>
-            <!--
+            
             <div>
               <label for="name">Name: </label><input type="text" name="name" />
             </div>
-            -->
+            
             <div>
                 <label for="password">Password: </label><input type="password" name="password" required/>
             </div>
             <button>Sign Up</button>
         </form>
-        
-    </main>
-</body>
-</html>
+-->

@@ -1,7 +1,7 @@
 import { Request } from 'express';
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
-import { ImageType } from '../utils/types-modules';
+import { ImageType } from '../types';
 
 // 이미지 파일 유형 검증
 const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {

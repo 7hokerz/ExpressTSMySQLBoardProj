@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -21,142 +24,119 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const tsyringe_1 = require("tsyringe");
 const services_1 = require("../services");
-const shared_modules_1 = require("../utils/shared-modules");
-const SSERepository_1 = __importDefault(require("../utils/SSERepository"));
-class PostController {
-    constructor() {
-        this.postService = new services_1.PostService();
+const decorators_1 = require("../decorators");
+const SSEUtil_1 = __importDefault(require("../utils/SSEUtil"));
+const middlewares_1 = require("../middlewares");
+const errors_1 = require("../errors");
+let PostController = class PostController {
+    constructor(postService, SSE) {
+        this.postService = postService;
+        this.SSE = SSE;
     }
-    posts(req, res, next) {
+    // 타입 가드 사용
+    checkUserId(userId) {
+        if (!userId) {
+            throw new errors_1.UnauthorizedError();
+        }
+    }
+    /*
+    async posts(req: Request, res: Response, next: NextFunction): Promise<void> {
+        const posts = await this.postService.posts();
+        res.render('index', { posts });
+    }
+    */
+    paginatedPosts(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const posts = yield this.postService.posts();
-                res.render('index', { posts });
-            }
-            catch (error) {
-                next(error);
-            }
+            const page = Number(req.query.page) || 1; // 현재 페이지
+            const limit = Number(req.query.limit) || 4; // 게시글 개수 제한
+            const { posts, totalPages } = yield this.postService.paginatedPosts(page, limit);
+            res.render('index', {
+                posts,
+                currentPage: page,
+                totalPages
+            });
         });
     }
     newpost(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
-            const [post, user_id] = [req.body, req.user_id];
-            try {
-                yield this.postService.newpost(post, user_id);
-                res.redirect('/posts');
-            }
-            catch (error) {
-                next(error);
-            }
+            const [post, userId] = [req.body, req.user_id];
+            this.checkUserId(userId);
+            yield this.postService.newpost(post, userId);
+            res.redirect('/posts');
         });
     }
     postdetail(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             const [postId, userId] = [Number(req.params.postId), req.user_id];
-            try {
-                const postData = yield this.postService.postdetail(postId, userId);
-                res.render('postDetails', {
-                    post: postData.post,
-                    postUser: postData.postUser,
-                    comment: postData.comment,
-                    error: null
-                });
-            }
-            catch (error) {
-                next(error);
-            }
+            this.checkUserId(userId);
+            const postData = yield this.postService.postdetail(postId, userId);
+            res.render('postDetails', {
+                post: postData.post,
+                postUser: postData.postUser,
+                comment: postData.comment,
+                error: null
+            });
         });
     }
     deletepost(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             const [postId, userId] = [Number(req.params.postId), req.user_id];
-            try {
-                yield this.postService.deletepost(postId, userId);
-                res.status(200).json({
-                    ok: true
-                });
-            }
-            catch (error) {
-                next(error);
-            }
+            this.checkUserId(userId);
+            yield this.postService.deletepost(postId, userId);
+            res.status(200).json(middlewares_1.ResponseHandler.success(null));
         });
     }
     updatepost(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             const [postId, userId] = [Number(req.params.postId), req.user_id];
+            this.checkUserId(userId);
             const { title, content } = req.body;
-            try {
-                yield this.postService.updatepost(postId, userId, title, content);
-                res.redirect(`/posts/${postId}`);
-            }
-            catch (error) {
-                next(error);
-            }
+            yield this.postService.updatepost(postId, userId, title, content);
+            res.redirect(`/posts/${postId}`);
         });
     }
     renderUpdate(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             const [postId, userId] = [Number(req.params.postId), req.user_id];
-            try {
-                const post = yield this.postService.renderUpdate(postId, userId);
-                res.render('updatePost', { post });
-            }
-            catch (error) {
-                next(error);
-            }
+            this.checkUserId(userId);
+            const post = yield this.postService.renderUpdate(postId, userId);
+            res.render('updatePost', { post });
         });
     }
     like(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             const [postId, userId] = [Number(req.params.postId), req.user_id];
-            try {
-                yield this.postService.like(postId, userId);
-                res.redirect(`/posts/${postId}`);
-            }
-            catch (error) {
-                next(error);
-            }
+            this.checkUserId(userId);
+            yield this.postService.like(postId, userId);
+            res.json(middlewares_1.ResponseHandler.success(null));
         });
     }
     unlike(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             const [postId, userId] = [Number(req.params.postId), req.user_id];
-            try {
-                yield this.postService.unlike(postId, userId);
-                res.redirect(`/posts/${postId}`);
-            }
-            catch (error) {
-                next(error);
-            }
+            this.checkUserId(userId);
+            yield this.postService.unlike(postId, userId);
+            res.json(middlewares_1.ResponseHandler.success(null));
         });
     }
     comment(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             const [postId, userId] = [Number(req.params.postId), req.user_id];
+            this.checkUserId(userId);
             const { content } = req.body;
-            try {
-                const Data = yield this.postService.comment(postId, userId, content);
-                SSERepository_1.default.notifyClients(Data.user_id, { postId, userId, content });
-                res.redirect(`/posts/${postId}`);
-            }
-            catch (error) {
-                next(error);
-            }
+            const Data = yield this.postService.comment(postId, userId, content);
+            this.SSE.notifyClients(Data.user_id, { postId, userId, content });
+            res.redirect(`/posts/${postId}`);
         });
     }
     deletecomment(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
-            const [{ postId, commentId }, userId] = [req.params, req.user_id];
-            try {
-                yield this.postService.deletecomment(Number(commentId), userId);
-                res.status(200).json({
-                    ok: true
-                });
-            }
-            catch (error) {
-                next(error);
-            }
+            const [{ commentId }, userId] = [req.params, req.user_id];
+            this.checkUserId(userId);
+            yield this.postService.deletecomment(Number(commentId), userId);
+            res.status(200).json(middlewares_1.ResponseHandler.success(null));
         });
     }
     sse(req, res) {
@@ -169,79 +149,34 @@ class PostController {
             res.setHeader('Content-Type', 'text/event-stream'); // 이벤트 스트림
             res.setHeader('Cache-Control', 'no-cache'); // 캐시 없음
             res.setHeader('Connection', 'keep-alive'); // 연결 유지
-            res.flushHeaders();
-            // Add client connection
-            SSERepository_1.default.addClient(userId, res);
+            res.flushHeaders(); // 즉시 전송
+            this.SSE.addClient(userId, res);
             req.on('close', () => {
-                SSERepository_1.default.removeClient(userId, res);
+                this.SSE.removeClient(userId, res);
             });
         });
     }
-}
+};
+PostController = __decorate([
+    (0, tsyringe_1.injectable)(),
+    decorators_1.autoBind,
+    decorators_1.AsyncWrapper,
+    __param(0, (0, tsyringe_1.inject)(services_1.PostService)),
+    __param(1, (0, tsyringe_1.inject)(SSEUtil_1.default)),
+    __metadata("design:paramtypes", [services_1.PostService,
+        SSEUtil_1.default])
+], PostController);
 exports.default = PostController;
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Function]),
-    __metadata("design:returntype", Promise)
-], PostController.prototype, "posts", null);
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Function]),
-    __metadata("design:returntype", Promise)
-], PostController.prototype, "newpost", null);
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Function]),
-    __metadata("design:returntype", Promise)
-], PostController.prototype, "postdetail", null);
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Function]),
-    __metadata("design:returntype", Promise)
-], PostController.prototype, "deletepost", null);
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Function]),
-    __metadata("design:returntype", Promise)
-], PostController.prototype, "updatepost", null);
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Function]),
-    __metadata("design:returntype", Promise)
-], PostController.prototype, "renderUpdate", null);
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Function]),
-    __metadata("design:returntype", Promise)
-], PostController.prototype, "like", null);
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Function]),
-    __metadata("design:returntype", Promise)
-], PostController.prototype, "unlike", null);
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Function]),
-    __metadata("design:returntype", Promise)
-], PostController.prototype, "comment", null);
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Function]),
-    __metadata("design:returntype", Promise)
-], PostController.prototype, "deletecomment", null);
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
-], PostController.prototype, "sse", null);
+/**
+ *
+ *
+ *
+ *
+ * comment
+ * -
+ *
+ * sse
+ * - 알림을 받기 위한 응답 객체 헤더 설정 및 클라이언트 연결
+ *
+ *
+ */

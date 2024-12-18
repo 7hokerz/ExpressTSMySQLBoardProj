@@ -1,19 +1,22 @@
-import { ILikeRepository } from '../domain/interfaces/';
-import QueryExecutor from './QueryExecutor';
 import { PoolConnection } from 'mysql2/promise';
+import { ILikeRepository } from '../domain/interfaces/';
+import { NotFoundError } from '../errors';
+import QueryExecutor from './QueryExecutor';
+import { LikeStatus } from '../types';
 
 export default class LikeDAO implements ILikeRepository {
     constructor(connection: PoolConnection) {
         QueryExecutor.initialize(connection);
     }
 
-    async getLikeYN(userId: number, postId: number): Promise<string> {
+    async getPostLikeInfo(userId: number, postId: number): Promise<LikeStatus> {
         const query = `
-        SELECT 1 FROM postLike
-        WHERE user_id = ? AND post_id = ?`;
-        const { rows } = await QueryExecutor.executeQuery<any>(query, [userId, postId]);
-
-        return rows.length > 0 ? "deleteLike" : "like";
+        SELECT EXISTS (
+            SELECT 1 FROM postLike
+            WHERE user_id = ? AND post_id = ?
+        ) as isLiked`;
+        const { rows } = await QueryExecutor.executeQuery(query, [userId, postId]);
+        return rows[0].isLiked ? LikeStatus.LIKED : LikeStatus.NOT_LIKED;
     }
 
     async updateLike(userId: number, postId: number): Promise<void> {
@@ -21,7 +24,7 @@ export default class LikeDAO implements ILikeRepository {
         INSERT INTO postLike
         (user_id, post_id) VALUES (?, ?)`;
 
-        const { header } = await QueryExecutor.executeQuery<never>(query, [userId, postId]);
+        const { header } = await QueryExecutor.executeQuery(query, [userId, postId]);
 
         if (header.affectedRows === 0) {
             throw new Error(`Post with ID ${postId} not found`);
@@ -33,10 +36,10 @@ export default class LikeDAO implements ILikeRepository {
         DELETE FROM postLike
         WHERE user_id = ? AND post_id = ?`;
         
-        const { header } = await QueryExecutor.executeQuery<never>(query, [userId, postId]);
+        const { header } = await QueryExecutor.executeQuery(query, [userId, postId]);
 
         if (header.affectedRows === 0) {
-            throw new Error(`Post with ID ${postId} not found`);
+            throw new NotFoundError(`Post with ID ${postId}`);
         }
     }
 
@@ -45,7 +48,7 @@ export default class LikeDAO implements ILikeRepository {
         DELETE FROM postLike 
         WHERE post_id = ?`;
 
-        const { header } = await QueryExecutor.executeQuery<never>(query, [postId]);
+        const { header } = await QueryExecutor.executeQuery(query, [postId]);
 
         //if (header.affectedRows === 0) {
             //throw new Error(`Post with ID ${postId} not found`);

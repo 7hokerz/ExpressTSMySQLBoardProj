@@ -13,4 +13,5 @@ export default (app: Express) => {
     app.set('views', path.join(__dirname, '../../views')); // 뷰 파일 경로 설정
 
     app.use(express.static(path.join(__dirname, '../../public'))); // 정적 파일 경로 설정
+    app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 };

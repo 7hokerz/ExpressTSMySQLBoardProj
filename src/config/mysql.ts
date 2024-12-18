@@ -1,14 +1,14 @@
 import mysql, { Pool, PoolConnection } from 'mysql2/promise';
-import { container, singleton } from "tsyringe";
+import { singleton } from "tsyringe";
 import env from './index';
 
 @singleton()
 export default class Database {
-    #pool: Pool;
-    #activeConnections: Set<PoolConnection> = new Set(); // 커넥션들을 담는 Set
+    private readonly pool: Pool;
+    private activeConnections: Set<PoolConnection> = new Set(); // 커넥션들을 담는 Set
     
     constructor() {
-      this.#pool = mysql.createPool({
+      this.pool = mysql.createPool({
         host: env.db.host,
         port: parseInt(env.db.port as string, 10),
         user: env.db.uid,
@@ -22,8 +22,8 @@ export default class Database {
     
     public async getConnection(): Promise<PoolConnection> { // DB 연결
       try {
-        const conn = await this.#pool.getConnection();
-        this.#activeConnections.add(conn);
+        const conn = await this.pool.getConnection();
+        this.activeConnections.add(conn);
         return conn;
       } catch(error) {
         console.error("MySQL connection error: " + error);
@@ -34,7 +34,7 @@ export default class Database {
     public release(conn: PoolConnection): void { // DB 연결 반환
       try {
         conn.release();
-        this.#activeConnections.delete(conn);
+        this.activeConnections.delete(conn);
       }catch(error) {
         console.error("Failed to release connection:", error);
       }
@@ -44,19 +44,20 @@ export default class Database {
       try {
         const activeConnections = await this.fetchActiveConnections();
         
-        for (const conn of activeConnections) this.release(conn);
-        
-        await this.#pool.end();
+        for (const conn of activeConnections) {
+          console.log(conn);
+          this.release(conn);
+        }
+        await this.pool.end();
       } catch (error) {
         console.error("Failed to close the pool:", error);
       }
     }
     // 연결된 모든 커넥션들을 반환
     private async fetchActiveConnections(): Promise<PoolConnection[]> {
-      return Array.from(this.#activeConnections);
+      return Array.from(this.activeConnections);
     }
 }
-container.register('Database', { useClass: Database });
 /*
   DB 연결 및 종료 함수를 모듈 형식으로 반환
 

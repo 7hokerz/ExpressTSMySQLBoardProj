@@ -1,37 +1,17 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
+import { container } from 'tsyringe';
 import { upload } from '../config/upload';
-import path from 'path';
-import fs from 'fs/promises';
+import { ImageController } from '../controllers';
 
 const router = express.Router();
+
+const imageController = container.resolve(ImageController);
 
 router.post(
     '/', 
     upload.single('image'), 
-    async (req: Request, res: Response, next: NextFunction) => {
-        try {
-            const file = req.file;
-
-            if (!file || !(req.body.fileName)) {
-                res.status(400).json({ error: 'No file uploaded' });
-                return;
-            }
-            const fileName = `${req.body.fileName}${path.extname(file.originalname)}`;
-            const rndName = Date.now();
-
-            await fs.rename(
-                file.path, 
-                `${path.dirname(file.path)}/${rndName + '_' + fileName}`
-            );
-            
-            res.json({
-                title: req.body.fileName || 'Untitled',
-                imageUrl: `/uploads/${rndName  + '_' + fileName}`,
-            });
-        } catch(error) {
-            next(error);
-        }
-});
+    imageController.uploadImage
+);
 
 export default router;
 

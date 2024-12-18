@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -19,38 +22,33 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const services_1 = require("../services");
-const shared_modules_1 = require("../utils/shared-modules");
-class TokenController {
-    constructor() {
-        this.tokenService = new services_1.TokenService();
+const utils_1 = require("../utils");
+const decorators_1 = require("../decorators");
+const errors_1 = require("../errors");
+const tsyringe_1 = require("tsyringe");
+let TokenController = class TokenController {
+    constructor(tokenService) {
+        this.tokenService = tokenService;
     }
     refreshToken(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             const refreshToken = req.cookies[process.env.USER_COOKIE_KEY2];
-            try {
-                if (!refreshToken) {
-                    res.status(401).send(`
-                    <h1>You are not Logged In</h1>
-                    <a href="/">Go Back</a>
-                `);
-                    return;
-                }
-                const { userId, username } = yield this.tokenService.verifyToken(refreshToken);
-                const { accessToken } = yield this.tokenService.generateToken(userId, username, false);
-                shared_modules_1.CookieUtil.manageCookie(req, res, process.env.USER_COOKIE_KEY, accessToken);
-                shared_modules_1.CookieUtil.manageCookie(req, res, process.env.USER_COOKIE_KEY2, refreshToken);
-                res.redirect(req.query.nextlink);
+            if (!refreshToken) {
+                throw new errors_1.UnauthorizedError();
             }
-            catch (error) {
-                next(error);
-            }
+            const { userId, username } = yield this.tokenService.verifyToken(refreshToken);
+            const { accessToken } = yield this.tokenService.generateToken(userId, username, false);
+            utils_1.CookieUtil.manageCookie(req, res, process.env.USER_COOKIE_KEY, accessToken);
+            utils_1.CookieUtil.manageCookie(req, res, process.env.USER_COOKIE_KEY2, refreshToken);
+            res.redirect(req.query.nextlink);
         });
     }
-}
+};
+TokenController = __decorate([
+    (0, tsyringe_1.injectable)(),
+    decorators_1.autoBind,
+    decorators_1.AsyncWrapper,
+    __param(0, (0, tsyringe_1.inject)(services_1.TokenService)),
+    __metadata("design:paramtypes", [services_1.TokenService])
+], TokenController);
 exports.default = TokenController;
-__decorate([
-    shared_modules_1.autoBind,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Function]),
-    __metadata("design:returntype", Promise)
-], TokenController.prototype, "refreshToken", null);

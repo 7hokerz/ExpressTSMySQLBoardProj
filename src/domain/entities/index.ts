@@ -1,12 +1,12 @@
-import { PostDTO } from './PostDTO';
-import { PostDetailsDTO } from './PostDetailsDTO';
-import { CommentDTO } from './CommentDTO';
-import { UserDTO } from './UserDTO';
+import { PostResponseDTO } from './PostDTO';
+import { PostDetailsResponseDTO } from './PostDetailsDTO';
+import { CommentResponseDTO } from './CommentDTO';
+import { UserRequestDto, UserResponseDto } from './UserDTO';
 
 export {
-    PostDTO, 
-    PostDetailsDTO, 
-    CommentDTO, 
-    UserDTO
+    PostResponseDTO,
+    PostDetailsResponseDTO,
+    CommentResponseDTO,
+    UserRequestDto, UserResponseDto
 }
     

@@ -1,56 +1,50 @@
 import bcrypt from 'bcrypt';
-import { 
-    HttpError, 
-    jwtToken,
-    withConnection,
-    Validation
-} from '../utils/shared-modules';
-import { UserDTO } from '../domain/entities';
+import { inject, injectable } from 'tsyringe';
+import { TokenUtil } from '../utils';
+import { withDB, Transaction } from "../decorators";
+import { BadRequestError } from '../errors';
+import { UserRequestDto, UserResponseDto } from '../domain/entities';
 import { DAOFactory, UserDAO, RefreshTokenDAO } from '../daos';
 
 class PasswordManager {
-    private static readonly SALT_ROUNDS = 10;
+    private static readonly SALT_ROUNDS = 10; // 10개의 해시를 생성, 약 100ms
 
     static async hashing(password: string): Promise<string> {
         return bcrypt.hash(password, this.SALT_ROUNDS);
     }
 
-    static async comparePwd(input_Pw: string, DB_Pw: string): Promise<boolean> {
-        return bcrypt.compare(input_Pw, DB_Pw);
+    static async comparePwd(input_Pw: string, DB_Pw: string): Promise<void> {
+        const pwdState = await bcrypt.compare(input_Pw, DB_Pw);
+        
+        if (!pwdState) {// 패스워드 일치 검증
+            throw new BadRequestError('패스워드 불일치');
+        }
     }
 }
 
-interface UserInput {
-    username: string;
-    password: string;
-}
-
+@injectable()
+@withDB
 export default class UserService {
-    private readonly jwttoken: jwtToken = new jwtToken();
     private daofactory!: DAOFactory;
 
-    private async validateUserInput(input: UserInput): Promise<void> {
-        Validation.validUserInput([
-            { value: input.username },
-            { value: input.password }
-        ]);
-    } 
+    constructor(
+        @inject(TokenUtil) private readonly jwttoken: TokenUtil
+    ) {}
 
-    @withConnection(false)
-    async signup(username: string, password: string): Promise<void> {
-        await this.validateUserInput({ username, password });
-
+    async signup(userReq: UserRequestDto): Promise<void> {
         const userDAO = this.daofactory.getDAO(UserDAO);
+        const { username } = userReq;
+
         const user = await userDAO.getUser(username);
         if(user){
-            throw new HttpError(400, `duplicate username: ${username}`);
+            throw new BadRequestError(`duplicate username: ${username}`);
         }
-        const hashedPwd = await PasswordManager.hashing(password);
+        const hashedPwd = await PasswordManager.hashing(userReq.getPwd());
 
         await userDAO.createUser({username, password: hashedPwd});
     }
 
-    @withConnection(true)
+    @Transaction
     async withdraw(userId: number): Promise<void> {
         const [userDAO, refreshTokenDAO] = await Promise.all([
             this.daofactory.getDAO(UserDAO),
@@ -62,84 +56,71 @@ export default class UserService {
         ]);
     }
 
-    @withConnection(false)
-    async login(username: string, password: string): Promise<UserDTO> {
-        await this.validateUserInput({ username, password });
+    async login(userReq: UserRequestDto): Promise<UserResponseDto> {
         const [userDAO, refreshTokenDAO] = await Promise.all([
             this.daofactory.getDAO(UserDAO),
             this.daofactory.getDAO(RefreshTokenDAO),
         ]);
+        const { username } = userReq;
         
         const user = await userDAO.getUser(username);
         
         if (!user) {
-            throw new HttpError(400, `존재하지 않는 이름: ${username}`);
+            throw new BadRequestError(`존재하지 않는 이름: ${username}`);
         }
-        const pwdState = await PasswordManager.comparePwd(password, user.password);
+        await PasswordManager.comparePwd(userReq.getPwd(), user.password);
 
-        if (!pwdState) {
-            throw new HttpError(400, `패스워드 불 일 치`);
-        }
         await refreshTokenDAO.deleteAllByUser(user.id);
 
-        return new UserDTO(
+        return new UserResponseDto(
             user.id,
         );
     }
 
-    @withConnection(false)
     async logout(user_id: number): Promise<void> {
         const refreshTokenDAO = this.daofactory.getDAO(RefreshTokenDAO);
         await refreshTokenDAO.deleteAllByUser(user_id);
     }
 
-    @withConnection(false)
-    async renderUserPage(username: string): Promise<UserDTO> {
+    async edit(currentUserReq: UserRequestDto, newUserReq: UserRequestDto): Promise<any> {
+        const userDAO = this.daofactory.getDAO(UserDAO);
+        
+        const user = await userDAO.getUser(newUserReq.username);
+        
+        if(newUserReq.username !== currentUserReq.username && user){ // 작성자 검증
+            throw new BadRequestError(`duplicate username: ${newUserReq.username}`);
+        }
+        const currentUser = await userDAO.getUser(currentUserReq.username);
+        
+        if(!(currentUser.id)){// 회원 유무 검증
+            throw new BadRequestError(`존재하지 않는 유저: ${currentUserReq.username}`);
+        }
+        await PasswordManager.comparePwd(currentUserReq.getPwd(), currentUser.password);
+        
+        const hashedPwd = await PasswordManager.hashing(newUserReq.getPwd());
+
+        await userDAO.editUser(currentUser.id, {
+            ...newUserReq, 
+            password : hashedPwd,
+        });
+        
+        const [accessToken, refreshToken] = await Promise.all([
+            this.jwttoken.generateAccessToken(newUserReq.username, currentUser.id),
+            this.jwttoken.generateRefreshToken(newUserReq.username, currentUser.id),
+        ]);
+        return { accessToken, refreshToken };
+    }
+
+    async renderUserPage(username: string): Promise<UserResponseDto> {
         const userDAO = this.daofactory.getDAO(UserDAO);
         const user = await userDAO.getUser(username);
 
         if (!user) {
-            throw new HttpError(400, `존재하지 않는 유저: ${username}`);
+            throw new BadRequestError(`존재하지 않는 유저: ${username}`);
         }
-        return new UserDTO(
+        return new UserResponseDto(
             user.user_id,
-            user.username,
-            user.pwd,
+            user.username
         );
-    }
-
-    @withConnection(false)
-    async edit(curUsername : string, newUser: any): Promise<any> {
-        await Promise.all([
-            Validation.validUserInput([{ value: newUser.username }]),
-            Validation.validUserInput([{ value: newUser.password }])
-        ]);
-        const userDAO = this.daofactory.getDAO(UserDAO);
-        
-        const user = await userDAO.getUser(newUser.username);
-        
-        if(newUser.username !== curUsername && user){ // 작성자 검증
-            throw new HttpError(400, `duplicate username: ${newUser.username}`);
-        }
-        const curUser = await userDAO.getUser(curUsername);
-
-        if(!(curUser?.user_id)){// 회원 유무 검증
-            throw new HttpError(400, `올바르지 않은 유저: ${curUsername}`);
-        }
-        const pwdState = await PasswordManager.comparePwd(newUser.curPw, curUser.password);
-
-        if (!pwdState) {// 패스워드 일치 검증
-            throw new HttpError(400, '패스워드 불일치');
-        }
-        const hashedPwd = await PasswordManager.hashing(newUser.password);
-
-        await userDAO.editUser(curUser.user_id, {
-            ...newUser, 
-            password : hashedPwd,
-        });
-        const accessToken = this.jwttoken.generateAccessToken(newUser.username, curUser.user_id);
-        const refreshToken = this.jwttoken.generateRefreshToken(newUser.username, curUser.user_id);
-
-        return { accessToken, refreshToken };
     }
 }

@@ -1,110 +1,107 @@
 import { Request, Response, NextFunction } from "express";
-import { autoBind, CookieUtil } from "../utils/shared-modules";
-import { ExtendedReq } from '../utils/types-modules';
+import { injectable, inject } from "tsyringe";
+import { AsyncWrapper, autoBind } from "../decorators";
+import { CookieUtil } from "../utils/";
 import { UserService, TokenService } from "../services";
+import { ExtendedReq } from '../utils/types-modules';
+import { ResponseHandler } from "../middlewares";
 import env from "../config/index";
+import { UnauthorizedError } from "../errors";
+import { validateOrReject } from "class-validator";
+import { UserRequestDto } from "../domain/entities";
 
+@injectable()
+@autoBind
+@AsyncWrapper
 export default class UserController {
-    private userService: UserService = new UserService();
-    private tokenService: TokenService = new TokenService();
-    
-    @autoBind 
+    constructor(
+        @inject(TokenService) private tokenService: TokenService,
+        @inject(UserService) private userService: UserService
+    ) {}
+
     async signup(req: Request, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const {username, password} = req.body;
-            await this.userService.signup(username, password);
-            res.redirect('/login');
-        } catch (error) {
-            next(error);
-        }
+        const { username, password } = req.body;
+        const userReq = new UserRequestDto(username, atob(password));
+        await validateOrReject(userReq); // 조건 불만족 시 오류 반환
+
+        await this.userService.signup(userReq);
+        res.status(200).json(ResponseHandler.success(null));
     }
 
-    @autoBind
     async withdraw(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
-        if(req.username && req.user_id){
-            await this.userService.withdraw(req.user_id);
-            CookieUtil.manageCookie(req, res, env.cookie.user as string);
-            CookieUtil.manageCookie(req, res, env.cookie.user2 as string);
+        if(!(req.username && req.user_id)) {
+            throw new UnauthorizedError();
         }
-        res.status(200).json({
-            ok: true,
-        })
+        
+        await this.userService.withdraw(req.user_id);
+        await Promise.all([
+            CookieUtil.manageCookie(req, res, env.cookie.user as string),
+            CookieUtil.manageCookie(req, res, env.cookie.user2 as string),
+        ]);
+        res.status(200).json(ResponseHandler.success(null));
     }
     
-    @autoBind
     async login(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const { username, password } = req.body;
-            const data = await this.userService.login(username, atob(password));
-            const Token = await this.tokenService.generateToken(data.user_id, username, true);
+        const { username, password } = req.body;
+        const userReq = new UserRequestDto(username, atob(password));
+        await validateOrReject(userReq); // 조건 불만족 시 오류 반환
 
-            await Promise.all([
-                CookieUtil.manageCookie(req, res, env.cookie.user as string, Token.accessToken),
-                CookieUtil.manageCookie(req, res, env.cookie.user2 as string, Token.refreshToken),
-            ]);
-            res.status(200).json({
-                ok: true
-            });
-        } catch (error) {
-            next(error);
-        }
+        const data = await this.userService.login(userReq);
+        const Token = await this.tokenService.generateToken(data.user_id, username, true);
+
+        await Promise.all([
+            CookieUtil.manageCookie(req, res, env.cookie.user as string, Token.accessToken),
+            CookieUtil.manageCookie(req, res, env.cookie.user2 as string, Token.refreshToken),
+        ]);
+        res.status(200).json(ResponseHandler.success(null));
     }
 
-    @autoBind
     async logout(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
-        try {
-            if(req.username && req.user_id){
-                await this.userService.logout(req.user_id);
-                await Promise.all([
-                    CookieUtil.manageCookie(req, res, env.cookie.user as string),
-                    CookieUtil.manageCookie(req, res, env.cookie.user2 as string),
-                ]);
-                res.status(200).json({
-                    ok: true,
-                })
-            } else {
-                res.status(200).json({
-                    ok: false,
-                })
-            }
-        } catch (error) {
-            next(error);
+        if(!(req.username && req.user_id)) {
+            throw new UnauthorizedError();
         }
-    }
-    
-    @autoBind 
-    async renderUserInfoPage(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const user = await this.userService.renderUserPage(req.username!);
-            res.render('userInfo', { user });
-        } catch (error) {
-            next(error);
-        }
+
+        await this.userService.logout(req.user_id);
+        await Promise.all([
+            CookieUtil.manageCookie(req, res, env.cookie.user as string),
+            CookieUtil.manageCookie(req, res, env.cookie.user2 as string),
+        ]);
+        res.status(200).json(ResponseHandler.success(null));
     }
 
-    @autoBind 
-    async renderEditPage(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const user = await this.userService.renderUserPage(req.username!);
-            res.render('editPage', { username: user.username });
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    @autoBind   
     async edit(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
-        try {
-            const newUser = req.body;
-            const token = await this.userService.edit(req.username!, newUser);
-
-            await Promise.all([
-                CookieUtil.manageCookie(req, res, env.cookie.user as string, token.accessToken),
-                CookieUtil.manageCookie(req, res, env.cookie.user2 as string, token.refreshToken)
-            ]);
-            res.redirect('/posts');
-        } catch (error) {
-            next(error);
+        if(!req.username) {
+            throw new UnauthorizedError();
         }
+        const { username, curPw, password } = req.body;
+        const newUserReq = new UserRequestDto(username, password);
+        const currentUserReq = new UserRequestDto(req.username, curPw);
+        
+        await validateOrReject(newUserReq); // 조건 불만족 시 오류 반환
+        await validateOrReject(currentUserReq);
+
+        const token = await this.userService.edit(currentUserReq, newUserReq);
+
+        await Promise.all([
+            CookieUtil.manageCookie(req, res, env.cookie.user as string, token.accessToken),
+            CookieUtil.manageCookie(req, res, env.cookie.user2 as string, token.refreshToken)
+        ]);
+        res.redirect('/posts');
+    }
+     
+    async renderUserInfoPage(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
+        if(!req.username) {
+            throw new UnauthorizedError();
+        }
+        const user = await this.userService.renderUserPage(req.username);
+        res.render('userInfo', { user });
+    }
+ 
+    async renderEditPage(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
+        if(!req.username) {
+            throw new UnauthorizedError();
+        }
+        const user = await this.userService.renderUserPage(req.username);
+        res.render('editPage', { username: user.username });
     }
 }

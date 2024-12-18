@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const QueryExecutor_1 = __importDefault(require("./QueryExecutor"));
+const errors_1 = require("../errors");
 class PostDAO {
     constructor(connection) {
         QueryExecutor_1.default.initialize(connection);
@@ -26,6 +27,27 @@ class PostDAO {
             ON P.post_id = L.post_id
             GROUP BY P.post_id
             ORDER BY created_at DESC`;
+            const { rows } = yield QueryExecutor_1.default.executeQuery(query);
+            return rows;
+        });
+    }
+    getPaginatedPosts(limit, offset) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `
+            SELECT P.*, COUNT(L.like_id) AS like_count
+            FROM posts P
+            LEFT JOIN postLike L 
+            ON P.post_id = L.post_id
+            GROUP BY P.post_id
+            ORDER BY P.created_at DESC
+            LIMIT ? OFFSET ?`;
+            const { rows } = yield QueryExecutor_1.default.executeQuery(query, [String(limit), String(offset)]);
+            return rows;
+        });
+    }
+    getPostsCount() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `SELECT COUNT(*) AS total_posts FROM posts`;
             const { rows } = yield QueryExecutor_1.default.executeQuery(query);
             return rows;
         });
@@ -53,16 +75,16 @@ class PostDAO {
                 QueryExecutor_1.default.executeQuery(commentQuery, [postId])
             ]);
             const posts = postRow.rows[0];
-            if (posts === null || posts === undefined)
+            if (!posts)
                 return null;
             const comments = commentRow.rows;
-            return [posts, comments];
+            return { posts, comments };
         });
     }
     getPostDetailsYN(postId) {
         return __awaiter(this, void 0, void 0, function* () {
             const query = `
-        SELECT user_id
+        SELECT user_id, imageurl
         FROM posts P
         WHERE P.post_id = ?
         FOR UPDATE`;
@@ -77,7 +99,7 @@ class PostDAO {
         WHERE post_id = ?`;
             const { header } = yield QueryExecutor_1.default.executeQuery(query, [postId]);
             if (header.affectedRows === 0) {
-                throw new Error(`Post with ID ${postId} not found`);
+                throw new errors_1.NotFoundError(`Post with ID ${postId}`);
             }
         });
     }

@@ -1,0 +1,155 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f2f5;
+}
+.container {
+    width: 70%;
+    margin: 50px auto;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+}
+h1 {
+    text-align: center;
+    color: #2c3e50;
+    font-size: 2.5rem;
+    margin-bottom: 40px;
+}
+.actions {
+    text-align: right;
+    margin-bottom: 20px;
+}
+.actions a, .actions button {
+    margin-left: 10px;
+    background-color: #1abc9c;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+.actions a:hover, .actions button:hover {
+    background-color: #16a085;
+}
+.post-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 0;
+    margin: 0;
+}
+.post-card {
+    background-color: #ecf0f1;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.post-card:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    transform: translateY(-5px);
+}
+.post-card a {
+    text-decoration: none;
+    color: #2c3e50;
+    font-size: 1.25rem;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 10px;
+    transition: color 0.3s ease;
+}
+.post-card a:hover {
+    color: #3498db;
+}
+.post-card span {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    display: block;
+}
+
+/* 알림 컨테이너 */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    z-index: 1000;
+}
+
+/* 알림 기본 스타일 */
+.notification {
+    background-color: #4caf50; /* 기본 배경 색상 (성공) */
+    color: gray; /* 텍스트 색상 */
+    padding: 15px; /* 내부 여백 */
+    margin-bottom: 10px; /* 알림 간 간격 */
+    border-radius: 8px; /* 모서리 둥글기 */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* 그림자 효과 */
+    display: flex; /* 닫기 버튼과 텍스트 정렬 */
+    align-items: center; /* 세로 정렬 */
+    justify-content: space-between; /* 닫기 버튼과 텍스트 간격 */
+    opacity: 0; /* 초기 상태: 보이지 않음 */
+    transform: translateY(-20px); /* 초기 위치: 위로 이동 */
+    animation: slide-in 0.5s forwards, fade-out 0.5s 10s forwards; /* 등장 및 퇴장 애니메이션 */
+    overflow: hidden; /* 텍스트가 넘치지 않도록 처리 */
+}
+
+/* 닫기 버튼 */
+.notification .close-btn {
+    background: transparent; /* 배경색 없음 */
+    border: none; /* 테두리 없음 */
+    color: gray; /* 버튼 색상 */
+    font-size: 1.2em; /* 버튼 크기 */
+    cursor: pointer; /* 클릭 가능 상태 */
+}
+
+/* 슬라이드 인 애니메이션 */
+@keyframes slide-in {
+    from {
+        opacity: 0; /* 초기 투명 상태 */
+        transform: translateY(-20px); /* 위로 이동 */
+    }
+    to {
+        opacity: 1; /* 보이도록 설정 */
+        transform: translateY(0); /* 원래 위치로 이동 */
+    }
+}
+
+/* 페이드 아웃 애니메이션 */
+@keyframes fade-out {
+    from {
+        opacity: 1; /* 보이는 상태 */
+    }
+    to {
+        opacity: 0; /* 투명해짐 */
+        transform: translateY(-20px); /* 위로 이동 */
+    }
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.pagination a {
+    color: black;
+    padding: 8px 16px;
+    text-decoration: none;
+    transition: background-color .3s;
+    border: 1px solid #ddd;
+    margin: 0 4px;
+}
+
+.pagination a.active {
+    background-color: #4CAF50;
+    color: white;
+    border: 1px solid #4CAF50;
+}
+
+.pagination a:hover:not(.active) { background-color: #ddd; }

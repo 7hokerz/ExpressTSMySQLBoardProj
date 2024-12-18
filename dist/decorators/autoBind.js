@@ -1,19 +1,28 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = autobind;
-/**
- * this 바인딩 자동화 데코레이터
- * @param {any} _
- * @param {string} _2 - 멤버의 이름
- * @param {PropertyDescriptor} descriptor - 프로퍼티 설명자: 프로퍼티 값과 3가지 프로퍼티 플래그
- * @returns
- */
-function autobind(_, _2, descriptor) {
-    const originalMethod = descriptor.value;
-    return {
-        configurable: true,
-        get() {
-            return originalMethod.bind(this);
-        },
-    };
+exports.default = autoBind;
+function autoBind(constructor) {
+    const methodNames = Object.getOwnPropertyNames(constructor.prototype)
+        .filter(name => name !== 'constructor'); // 모든 메서드 가져오기
+    for (const methodName of methodNames) {
+        const originalMethod = constructor.prototype[methodName];
+        if (typeof originalMethod === 'function') {
+            Object.defineProperty(constructor.prototype, methodName, {
+                configurable: true,
+                get() {
+                    return originalMethod.bind(this); // `this` 바인딩
+                },
+            });
+        }
+    }
 }
+/**
+ * this 바인딩 자동화 클래스 데코레이터
+ *
+ * - express 미들웨어 함수의 특성을 보완하기 위함.
+ *
+ * - 모든 메서드를 순회하면서 바인딩을 실시함.
+ *
+ * { new (...args: any[]): {} } : 클래스 생성자를 나타내는 타입
+ *
+ */

@@ -1,8 +1,7 @@
 import { PoolConnection } from 'mysql2/promise';
-import { PostDTO } from '../domain/entities';
-import { RawComment, RawPost } from '../utils/types-modules';
 import QueryExecutor from './QueryExecutor';
 import { IPostRepository } from '../domain/interfaces';
+import { NotFoundError } from '../errors';
 
 export default class PostDAO implements IPostRepository {
     constructor(connection: PoolConnection) {
@@ -18,7 +17,28 @@ export default class PostDAO implements IPostRepository {
             GROUP BY P.post_id
             ORDER BY created_at DESC`;
 
-        const { rows } = await QueryExecutor.executeQuery<any>(query);
+        const { rows } = await QueryExecutor.executeQuery(query);
+        return rows;
+    }
+
+    async getPaginatedPosts(limit: number, offset: number): Promise<any> {
+        const query = `
+            SELECT P.*, COUNT(L.like_id) AS like_count
+            FROM posts P
+            LEFT JOIN postLike L 
+            ON P.post_id = L.post_id
+            GROUP BY P.post_id
+            ORDER BY P.created_at DESC
+            LIMIT ? OFFSET ?`;
+
+        const { rows } = await QueryExecutor.executeQuery(query, [String(limit), String(offset)]);
+        return rows;
+    }
+
+    async getPostsCount(): Promise<any> {
+        const query = `SELECT COUNT(*) AS total_posts FROM posts`;
+
+        const { rows } = await QueryExecutor.executeQuery(query);
         return rows;
     }
 
@@ -41,25 +61,27 @@ export default class PostDAO implements IPostRepository {
         
         // 병렬 처리로 속도 개선
         const [postRow, commentRow] = await Promise.all([
-            QueryExecutor.executeQuery<RawPost>(postQuery, [postId]),
-            QueryExecutor.executeQuery<RawComment>(commentQuery, [postId])
+            QueryExecutor.executeQuery(postQuery, [postId]),
+            QueryExecutor.executeQuery(commentQuery, [postId])
         ]);
 
         const posts = postRow.rows[0];
-        if(posts === null || posts === undefined) return null; 
+        
+        if(!posts) return null; 
         const comments = commentRow.rows;
 
-        return [posts, comments];
+        return {posts, comments};
     }
 
     async getPostDetailsYN(postId: number): Promise<any | null> {
         const query = `
-        SELECT user_id
+        SELECT user_id, imageurl
         FROM posts P
         WHERE P.post_id = ?
         FOR UPDATE`;
         
-        const { rows } = await QueryExecutor.executeQuery<Pick<RawPost, 'user_id'>>(query, [postId]);
+        const { rows } = await QueryExecutor.executeQuery(query, [postId]);
+        
         return rows[0] || null;
     }
 
@@ -68,33 +90,33 @@ export default class PostDAO implements IPostRepository {
         DELETE FROM posts 
         WHERE post_id = ?`;
 
-        const { header } = await QueryExecutor.executeQuery<never>(query, [postId]);
+        const { header } = await QueryExecutor.executeQuery(query, [postId]);
         
         if(header.affectedRows === 0) {
-            throw new Error(`Post with ID ${postId} not found`);
+            throw new NotFoundError(`Post with ID ${postId}`);
         }
     }
 
-    async updatePost(post: Pick<PostDTO, 'post_id' | 'title'| 'content'>): Promise<void> {
+    async updatePost(post: any): Promise<void> {
         const { post_id, title, content } = post;
         const query = `
         UPDATE posts 
         SET title = ?, content = ? 
         WHERE post_id = ?`;
 
-        const { header } = await QueryExecutor.executeQuery<never>(query, [title, content, post_id]);
+        const { header } = await QueryExecutor.executeQuery(query, [title, content, post_id]);
 
         if (header.affectedRows === 0) {
             throw new Error(`Post with ID ${post.post_id} not found`);
         }
     }
 
-    async createPost(post: Pick<PostDTO, 'title'| 'content' | 'imageurl'>, userId: number): Promise<void> {
+    async createPost(post: any, userId: number): Promise<void> {
         const {title, content, imageurl} = post;
         const query = `
         INSERT INTO posts (user_id, title, content, imageurl) 
         VALUES (?, ?, ?, ?)`;
-        await QueryExecutor.executeQuery<never>(query, [userId, title, content, imageurl ?? null]);
+        await QueryExecutor.executeQuery(query, [userId, title, content, imageurl ?? null]);
     }
 }
 
