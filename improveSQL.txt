@@ -1,0 +1,28 @@
+
+2024.12.22
+기존 쿼리: 먼저 조인 후 그룹화하여 중복 데이터를 제거
+    `SELECT P.post_id, P.title, P.created_at, P.view_count, 
+    COUNT(L.like_id) AS like_count
+    FROM posts P
+    LEFT JOIN postLike L 
+    ON P.post_id = L.post_id
+    GROUP BY P.post_id
+    ORDER BY P.created_at DESC
+    LIMIT ? OFFSET ?`;
+
+새 쿼리: 먼저 좋아요 테이블에서 그룹화(중복 제거) 후 나중에 포스트와 조인
+    `SELECT P.post_id, P.title, P.created_at, P.view_count, 
+        L.like_count
+    FROM posts P
+    LEFT JOIN (
+        SELECT post_id, COUNT(like_id) AS like_count
+        FROM postLike
+        GROUP BY post_id
+    ) L
+    ON P.post_id = L.post_id
+    ORDER BY P.created_at DESC
+    LIMIT ? OFFSET ?`
+
+    - 기존 쿼리와 새 쿼리의 실행 속도는 거의 차이 없음.
+    - 새 쿼리의 경우 가독성 및 논리적인 서브 쿼리 분리
+    - 새 쿼리의 작성 방식이 더 권장됨.
