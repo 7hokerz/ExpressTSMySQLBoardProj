@@ -48,8 +48,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 var _JwtToken_jwtSecret, _JwtToken_refreshSecret;
 Object.defineProperty(exports, "__esModule", { value: true });
 const jsonwebtoken_1 = __importStar(require("jsonwebtoken"));
-const index_1 = __importDefault(require("../config/index"));
 const tsyringe_1 = require("tsyringe");
+const index_1 = __importDefault(require("../config/index"));
 let JwtToken = class JwtToken {
     constructor() {
         _JwtToken_jwtSecret.set(this, void 0);

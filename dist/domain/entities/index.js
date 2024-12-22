@@ -1,11 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UserDTO = exports.CommentDTO = exports.PostDetailsDTO = exports.PostDTO = void 0;
+exports.UserResponseDto = exports.UserRequestDto = exports.CommentResponseDTO = exports.PostDetailsResponseDTO = exports.PostResponseDTO = void 0;
 const PostDTO_1 = require("./PostDTO");
-Object.defineProperty(exports, "PostDTO", { enumerable: true, get: function () { return PostDTO_1.PostDTO; } });
+Object.defineProperty(exports, "PostResponseDTO", { enumerable: true, get: function () { return PostDTO_1.PostResponseDTO; } });
 const PostDetailsDTO_1 = require("./PostDetailsDTO");
-Object.defineProperty(exports, "PostDetailsDTO", { enumerable: true, get: function () { return PostDetailsDTO_1.PostDetailsDTO; } });
+Object.defineProperty(exports, "PostDetailsResponseDTO", { enumerable: true, get: function () { return PostDetailsDTO_1.PostDetailsResponseDTO; } });
 const CommentDTO_1 = require("./CommentDTO");
-Object.defineProperty(exports, "CommentDTO", { enumerable: true, get: function () { return CommentDTO_1.CommentDTO; } });
+Object.defineProperty(exports, "CommentResponseDTO", { enumerable: true, get: function () { return CommentDTO_1.CommentResponseDTO; } });
 const UserDTO_1 = require("./UserDTO");
-Object.defineProperty(exports, "UserDTO", { enumerable: true, get: function () { return UserDTO_1.UserDTO; } });
+Object.defineProperty(exports, "UserRequestDto", { enumerable: true, get: function () { return UserDTO_1.UserRequestDto; } });
+Object.defineProperty(exports, "UserResponseDto", { enumerable: true, get: function () { return UserDTO_1.UserResponseDto; } });

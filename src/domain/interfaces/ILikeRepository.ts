@@ -1,7 +1,10 @@
-import { PostDTO, PostDetailsDTO, CommentDTO, UserDTO } from '../entities';
+enum LikeStatus {
+    LIKED = 'LIKED',
+    NOT_LIKED = 'NOT_LIKED'
+}
 
 export interface ILikeRepository {
-    getLikeYN(userId: number, postId: number): Promise<string>;
+    getPostLikeInfo(userId: number, postId: number): Promise<LikeStatus>;
     updateLike(userId: number, postId: number): Promise<void>;
     deleteLike(userId: number, postId: number): Promise<void>;
     deleteLikeAll(postId: number): Promise<void>;

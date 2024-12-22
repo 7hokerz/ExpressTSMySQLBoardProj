@@ -40,7 +40,7 @@ let SSEUtil = class SSEUtil {
             //console.log(`Client disconnected: userId=${userId}`);
         }
     }
-    // 가비지 컬렉터 (쓰이지 않는 연결 종료)
+    // 가비지 컬렉터 (쓰이지 않는 연결 주기적 종료)
     cleanupClients() {
         this.clients.forEach((responses, userId) => {
             const activeResponses = responses.filter((res) => !res.writableEnded);

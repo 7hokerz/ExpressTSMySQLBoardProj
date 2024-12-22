@@ -20,21 +20,6 @@
             <p>닉네임: </p>
         </div>
     </div>
-    <script>
-        async function logout() {
-            const response = await fetch('/logout', {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json', // 클라이언트가 JSON 응답을 원함을 명시
-                },
-            });
-            if (response.ok) {
-                window.location.replace('/login'); // 로그아웃 성공 시 로그인 페이지로 리다이렉트
-            } else {
-                alert('로그아웃 실패.');
-                console.error('Logout failed');
-            }
-        }
-    </script>
+    <script src="/JS/logout.js"></script>
 </body>
 </html>

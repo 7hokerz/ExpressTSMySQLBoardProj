@@ -1,4 +1,3 @@
-import { PostDTO, PostDetailsDTO, CommentDTO, UserDTO } from '../entities';
 
 export interface ICommentRepository {
     getComment(commentId: number): Promise<number | null>;

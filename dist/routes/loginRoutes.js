@@ -4,26 +4,26 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const tsyringe_1 = require("tsyringe");
 const controllers_1 = require("../controllers");
-const controllers_2 = require("../controllers");
-const shared_modules_1 = require("../utils/shared-modules");
+const middlewares_1 = require("../middlewares");
 const router = express_1.default.Router();
-const auth = new shared_modules_1.AuthMiddleware();
-const userController = new controllers_1.UserController();
-const tokenController = new controllers_2.TokenController();
-router.route('/signup') //회원가입
+const auth = tsyringe_1.container.resolve(middlewares_1.AuthMiddleware);
+const userController = tsyringe_1.container.resolve(controllers_1.UserController);
+const tokenController = tsyringe_1.container.resolve(controllers_1.TokenController);
+router.route('/signup') // 회원가입
     .get((req, res) => { res.render('signup'); })
     .post(userController.signup);
-router.get('/withdraw', auth.requireAuth, userController.withdraw); //회원탈퇴
-router.route('/login') //로그인
+router.get('/withdraw', auth.requireAuth, userController.withdraw); // 회원탈퇴
+router.route('/login') // 로그인 
     .get((req, res) => {
     if (req.username)
         return res.redirect('/posts');
     res.render('login');
 })
-    .post(userController.login); // 로
+    .post(userController.login);
 router.get('/logout', auth.requireAuth, userController.logout);
-router.get('/refresh-token', tokenController.refreshToken);
+router.get('/refresh-token', tokenController.refreshToken); // 토큰 갱신
 exports.default = router;
 /**
  *

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Image</title>
+    <link rel="stylesheet" href="/CSS/newPost.css">
+</head>
+<body>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <div>
+            <input type="file" name="image" required/>
+        </div>
+        <div>
+            <label for="fileName">파일 이름:</label>
+            <input type="text" name="fileName" required/>
+        </div>
+        <button id="imageBtn" type="submit">업로드하기</button>
+    </form>
+    <script src="/JS/uploadImage.js"></script>
+</body>
+</html>

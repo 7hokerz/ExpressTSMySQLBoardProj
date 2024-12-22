@@ -1,31 +1,53 @@
 import { Request, Response, NextFunction } from "express";
-import { container } from "tsyringe";
+import { inject, injectable } from "tsyringe";
 import { PostService } from "../services";
-import { ExtendedReq } from '../utils/types-modules';
-import { AsyncHandler, autoBind } from "../decorators";
+import { ExtendedReq } from '../interfaces';
+import { AsyncWrapper, autoBind } from "../decorators";
 import SSEUtil from "../utils/SSEUtil";
+import { ResponseHandler } from "../middlewares";
+import { UnauthorizedError } from "../errors";
 
+@injectable()
 @autoBind
-@AsyncHandler
+@AsyncWrapper
 export default class PostController {
-    private postService: PostService = new PostService();
-    private SSE: SSEUtil = container.resolve(SSEUtil);
-
-    async posts(req: Request, res: Response, next: NextFunction): Promise<void> {
-        const posts = await this.postService.posts();
-        res.render('index', { posts });
+    constructor (
+        @inject(PostService) private postService: PostService,
+        @inject(SSEUtil) private SSE: SSEUtil
+    ) {}
+    
+    // 타입 가드 사용
+    private typeGuardAuth<T extends number | string>(param: T | undefined): asserts param is T {
+        if(!param) {
+            throw new UnauthorizedError();
+        }
     }
 
+    async paginatedPosts(req: Request, res: Response, next: NextFunction): Promise<void> {
+        const page = Number(req.query.page) || 1; // 현재 페이지
+        const limit = Number(req.query.limit) || 6; // 게시글 개수 제한
+
+        const { posts, totalPages } = await this.postService.paginatedPosts(page, limit);
+        
+        res.render('index', { 
+            posts, 
+            currentPage: page,
+            totalPages
+        });
+    }
+    
     async newpost(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
-        const [post, user_id] = [req.body, req.user_id];
-        await this.postService.newpost(post, user_id!);
-        res.redirect('/posts');
+        const [post, userId] = [req.body, req.user_id];
+        this.typeGuardAuth(userId);
+        await this.postService.newpost(post, userId);
+        res.json(ResponseHandler.success(null));
     }
 
     async postdetail(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
         const [postId, userId] = [Number(req.params.postId), req.user_id];
+        this.typeGuardAuth(userId);
        
-        const postData = await this.postService.postdetail(postId, userId!);
+        const postData = await this.postService.postdetail(postId, userId);
 
         res.render('postDetails', {
             post: postData.post, 
@@ -37,63 +59,62 @@ export default class PostController {
 
     async deletepost(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
         const [postId, userId] = [Number(req.params.postId), req.user_id];
-       
-        await this.postService.deletepost(postId, userId!);
-        res.status(200).json({
-            ok: true
-        });
+        this.typeGuardAuth(userId);
+
+        await this.postService.deletepost(postId, userId);
+        res.status(200).json(ResponseHandler.success(null));
     }
 
     async updatepost(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
         const [postId, userId] = [Number(req.params.postId), req.user_id];
+        this.typeGuardAuth(userId);
         const { title, content } = req.body;
        
-        await this.postService.updatepost(postId, userId!, title, content);
+        await this.postService.updatepost(postId, userId, title, content);
         res.redirect(`/posts/${postId}`);
     }
 
     async renderUpdate(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
         const [postId, userId] = [Number(req.params.postId), req.user_id];
-
-        const post = await this.postService.renderUpdate(postId, userId!);
+        this.typeGuardAuth(userId);
+        const post = await this.postService.renderUpdate(postId, userId);
         res.render('updatePost', { post });
     }
 
     async like(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
         const [postId, userId] = [Number(req.params.postId), req.user_id];
-       
-        await this.postService.like(postId, userId!);
-        res.redirect(`/posts/${postId}`);
+        this.typeGuardAuth(userId);
+        await this.postService.like(postId, userId);
+        res.json(ResponseHandler.success(null));
     }
 
     async unlike(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
         const [postId, userId] = [Number(req.params.postId), req.user_id];
-       
-        await this.postService.unlike(postId, userId!);
-        res.redirect(`/posts/${postId}`);
+        this.typeGuardAuth(userId);
+        await this.postService.unlike(postId, userId);
+        res.json(ResponseHandler.success(null));
     }
 
     async comment(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
         const [postId, userId] = [Number(req.params.postId), req.user_id];
+        this.typeGuardAuth(userId);
         const { content } = req.body;
        
-        const Data = await this.postService.comment(postId, userId!, content);
+        const Data = await this.postService.comment(postId, userId, content);
         this.SSE.notifyClients(Data.user_id, { postId, userId, content });
         res.redirect(`/posts/${postId}`);
     }
 
     async deletecomment(req: ExtendedReq, res: Response, next: NextFunction): Promise<void> {
-        const [{postId, commentId}, userId] = [req.params, req.user_id];
-       
-        await this.postService.deletecomment(Number(commentId), userId!);
-        res.status(200).json({
-            ok: true
-        });
+        const [{ commentId }, userId] = [req.params, req.user_id];
+        this.typeGuardAuth(userId);
+
+        await this.postService.deletecomment(Number(commentId), userId);
+        res.status(200).json(ResponseHandler.success(null));
     }
 
     async sse(req: ExtendedReq, res: Response): Promise<void> {
         const userId = req.user_id;
-
         if(!userId) {
             res.status(401).end();
             return;

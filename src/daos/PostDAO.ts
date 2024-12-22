@@ -1,22 +1,32 @@
 import { PoolConnection } from 'mysql2/promise';
-import { PostDTO } from '../domain/entities';
-import { RawComment, RawPost } from '../utils/types-modules';
 import QueryExecutor from './QueryExecutor';
 import { IPostRepository } from '../domain/interfaces';
+import { NotFoundError } from '../errors';
 
 export default class PostDAO implements IPostRepository {
     constructor(connection: PoolConnection) {
         QueryExecutor.initialize(connection);
     }
 
-    async getPosts(): Promise<any> {
-        const query = `
-            SELECT P.*, COUNT(L.like_id) AS like_count
-            FROM posts P
-            LEFT JOIN postLike L 
-            ON P.post_id = L.post_id
-            GROUP BY P.post_id
-            ORDER BY created_at DESC`;
+    async getPaginatedPosts(limit: number, offset: number): Promise<any> {
+        const query = 
+        `SELECT P.post_id, P.title, P.created_at, P.view_count, L.like_count
+        FROM posts P
+        LEFT JOIN (
+            SELECT post_id, COUNT(like_id) AS like_count
+            FROM postLike
+            GROUP BY post_id
+        ) L
+        ON P.post_id = L.post_id
+        ORDER BY P.created_at DESC
+        LIMIT ? OFFSET ?`
+
+        const { rows } = await QueryExecutor.executeQuery(query, [String(limit), String(offset)]);
+        return rows;
+    }
+
+    async getPostsCount(): Promise<any> {
+        const query = `SELECT COUNT(*) AS total_posts FROM posts`;
 
         const { rows } = await QueryExecutor.executeQuery(query);
         return rows;
@@ -25,9 +35,11 @@ export default class PostDAO implements IPostRepository {
     async getPostDetails(postId: number): Promise<any | null> {
         const postQuery = `
             SELECT P.*, U.username, 
-                (SELECT COUNT(*) 
+            (
+                SELECT COUNT(*) 
                 FROM postLike L
-                WHERE L.post_id = P.post_id) AS like_count
+                WHERE L.post_id = P.post_id
+            ) AS like_count
             FROM posts P
             JOIN users U ON P.user_id = U.id 
             WHERE P.post_id = ?
@@ -56,8 +68,8 @@ export default class PostDAO implements IPostRepository {
     async getPostDetailsYN(postId: number): Promise<any | null> {
         const query = `
         SELECT user_id, imageurl
-        FROM posts P
-        WHERE P.post_id = ?
+        FROM posts
+        WHERE post_id = ?
         FOR UPDATE`;
         
         const { rows } = await QueryExecutor.executeQuery(query, [postId]);
@@ -73,11 +85,11 @@ export default class PostDAO implements IPostRepository {
         const { header } = await QueryExecutor.executeQuery(query, [postId]);
         
         if(header.affectedRows === 0) {
-            throw new Error(`Post with ID ${postId} not found`);
+            throw new NotFoundError(`Post with ID ${postId}`);
         }
     }
 
-    async updatePost(post: Pick<PostDTO, 'post_id' | 'title'| 'content'>): Promise<void> {
+    async updatePost(post: any): Promise<void> {
         const { post_id, title, content } = post;
         const query = `
         UPDATE posts 
@@ -91,12 +103,13 @@ export default class PostDAO implements IPostRepository {
         }
     }
 
-    async createPost(post: Pick<PostDTO, 'title'| 'content' | 'imageurl'>, userId: number): Promise<void> {
-        const {title, content, imageurl} = post;
+    async createPost(post: any, userId: number): Promise<void> {
+        const { title, content, imagePath } = post;
         const query = `
         INSERT INTO posts (user_id, title, content, imageurl) 
         VALUES (?, ?, ?, ?)`;
-        await QueryExecutor.executeQuery(query, [userId, title, content, imageurl ?? null]);
+        
+        await QueryExecutor.executeQuery(query, [userId, title, content, imagePath ?? null]);
     }
 }
 

@@ -16,4 +16,5 @@ exports.default = (app) => {
     app.set('view engine', 'ejs'); // 뷰 엔진 ejs 설정
     app.set('views', path_1.default.join(__dirname, '../../views')); // 뷰 파일 경로 설정
     app.use(express_1.default.static(path_1.default.join(__dirname, '../../public'))); // 정적 파일 경로 설정
+    app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../../uploads')));
 };

@@ -2,9 +2,9 @@ import { Connection, PoolConnection, ResultSetHeader } from "mysql2/promise";
 import { QueryResult } from '../utils/types-modules';
 
 export default class QueryExecutor {
-    private static connection: Connection | PoolConnection;
+    private static connection: PoolConnection;
     
-    public static initialize(connection: Connection | PoolConnection): void {
+    public static initialize(connection: PoolConnection): void {
         QueryExecutor.connection = connection;
     }
     /**

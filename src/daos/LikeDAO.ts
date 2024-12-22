@@ -1,18 +1,22 @@
-import { ILikeRepository } from '../domain/interfaces/';
-import QueryExecutor from './QueryExecutor';
 import { PoolConnection } from 'mysql2/promise';
+import { ILikeRepository } from '../domain/interfaces/';
+import { NotFoundError } from '../errors';
+import QueryExecutor from './QueryExecutor';
+import { LikeStatus } from '../types';
 
 export default class LikeDAO implements ILikeRepository {
     constructor(connection: PoolConnection) {
         QueryExecutor.initialize(connection);
     }
 
-    async getLikeYN(userId: number, postId: number): Promise<string> {
+    async getPostLikeInfo(userId: number, postId: number): Promise<LikeStatus> {
         const query = `
-        SELECT 1 FROM postLike
-        WHERE user_id = ? AND post_id = ?`;
+        SELECT EXISTS (
+            SELECT 1 FROM postLike
+            WHERE user_id = ? AND post_id = ?
+        ) as isLiked`;
         const { rows } = await QueryExecutor.executeQuery(query, [userId, postId]);
-        return rows.length > 0 ? "deleteLike" : "like";
+        return rows[0].isLiked ? LikeStatus.LIKED : LikeStatus.NOT_LIKED;
     }
 
     async updateLike(userId: number, postId: number): Promise<void> {
@@ -35,7 +39,7 @@ export default class LikeDAO implements ILikeRepository {
         const { header } = await QueryExecutor.executeQuery(query, [userId, postId]);
 
         if (header.affectedRows === 0) {
-            throw new Error(`Post with ID ${postId} not found`);
+            throw new NotFoundError(`Post with ID ${postId}`);
         }
     }
 

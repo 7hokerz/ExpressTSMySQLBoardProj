@@ -1,7 +1,7 @@
+import { injectable, inject } from "tsyringe";
 import { TokenUtil } from "../utils/";
 import { withDB } from "../decorators";
 import { DAOFactory, RefreshTokenDAO } from '../daos';
-import { injectable, inject } from "tsyringe";
 
 @injectable()
 @withDB
@@ -9,7 +9,7 @@ export default class TokenService {
     private daofactory!: DAOFactory;
 
     constructor(
-        @inject(TokenUtil) private jwttoken: TokenUtil = new TokenUtil()
+        @inject(TokenUtil) private jwttoken: TokenUtil
     ) {}
 
     // 리프레시, 액세스 토큰 생성

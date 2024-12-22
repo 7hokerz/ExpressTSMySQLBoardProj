@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import path from 'path';
-import { ImageType } from '../utils/types-modules';
+import { ImageType } from '../types';
 
 export const imageCacheMiddleware = (req: Request, res: Response, next: NextFunction) => {
     const fileExtension = path.extname(req.url).toLowerCase().slice(1);

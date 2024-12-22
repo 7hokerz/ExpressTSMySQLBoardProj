@@ -3,7 +3,6 @@ import { singleton } from 'tsyringe';
 import { TokenPayload } from '../types/TokenPayload.types';
 import env from "../config/index";
 
-
 @singleton()
 export default class JwtToken {
     #jwtSecret: Secret;
@@ -21,12 +20,12 @@ export default class JwtToken {
     // username, user_id를 포함하는 jwt 생성
     public generateAccessToken(username: string, id: number): string {
         const payload: TokenPayload = { username, id };
-        return jwt.sign(payload, this.#jwtSecret, {expiresIn: '1h' });
+        return jwt.sign(payload, this.#jwtSecret, { expiresIn: '1h' });
     }
 
     public generateRefreshToken(username: string, id: number): string {
         const payload: TokenPayload = { username, id };
-        return jwt.sign(payload, this.#refreshSecret, {expiresIn: '7d' });
+        return jwt.sign(payload, this.#refreshSecret, { expiresIn: '7d' });
     }
     // 토큰에서 원래의 Payload 추출 및 검증 
     public verifyAccessToken(token: string): TokenPayload | null {

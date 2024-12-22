@@ -12,18 +12,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const errors_1 = require("../errors");
 const QueryExecutor_1 = __importDefault(require("./QueryExecutor"));
+const types_1 = require("../types");
 class LikeDAO {
     constructor(connection) {
         QueryExecutor_1.default.initialize(connection);
     }
-    getLikeYN(userId, postId) {
+    getPostLikeInfo(userId, postId) {
         return __awaiter(this, void 0, void 0, function* () {
             const query = `
-        SELECT 1 FROM postLike
-        WHERE user_id = ? AND post_id = ?`;
+        SELECT EXISTS (
+            SELECT 1 FROM postLike
+            WHERE user_id = ? AND post_id = ?
+        ) as isLiked`;
             const { rows } = yield QueryExecutor_1.default.executeQuery(query, [userId, postId]);
-            return rows.length > 0 ? "deleteLike" : "like";
+            return rows[0].isLiked ? types_1.LikeStatus.LIKED : types_1.LikeStatus.NOT_LIKED;
         });
     }
     updateLike(userId, postId) {
@@ -44,7 +48,7 @@ class LikeDAO {
         WHERE user_id = ? AND post_id = ?`;
             const { header } = yield QueryExecutor_1.default.executeQuery(query, [userId, postId]);
             if (header.affectedRows === 0) {
-                throw new Error(`Post with ID ${postId} not found`);
+                throw new errors_1.NotFoundError(`Post with ID ${postId}`);
             }
         });
     }

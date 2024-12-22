@@ -1,20 +1,23 @@
 import NodeCache from 'node-cache';
 import { Response, NextFunction } from 'express';
+import { inject, injectable } from 'tsyringe';
 import { TokenUtil } from '../utils/';
 import { autoBind } from '../decorators';
-import { ExtendedReq } from '../utils/types-modules';
+import { ExtendedReq } from '../interfaces';
 import env from '../config';
-import { HttpError } from '../errors';
+import { UnauthorizedError } from '../errors';
 
+@injectable()
 @autoBind
 export default class AuthMiddleware {
     private readonly memoryCache: NodeCache;
-    private readonly jwtService: TokenUtil = new TokenUtil();
     private readonly userCookieKey: string = env.cookie.user!;
     private readonly userCookieKey2: string = env.cookie.user2!
     private readonly CACHE_DURATION = 15 * 60; // 15분
 
-    constructor() {
+    constructor(
+        @inject(TokenUtil) private tokenUtil: TokenUtil
+    ) {
         this.memoryCache = new NodeCache({
             stdTTL: this.CACHE_DURATION, // 캐시 항목 기본 만료 시간
             checkperiod: this.CACHE_DURATION + 10, // 캐시 만료 검사 주기
@@ -23,7 +26,7 @@ export default class AuthMiddleware {
     
     public requireAuth(req: ExtendedReq, res: Response, next: NextFunction): void {
         if(!req.username || !req.user_id){
-            throw new HttpError(401, '이 페이지를 볼 권한이 없습니다.');
+            throw new UnauthorizedError();
         }
         next();
     }
@@ -45,7 +48,7 @@ export default class AuthMiddleware {
         }
 
         try {
-            const payload = this.jwtService.verifyAccessToken(token);
+            const payload = this.tokenUtil.verifyAccessToken(token);
         
             if(payload && payload.username){
                 this.memoryCache.set(token, { // 캐시 설정
@@ -61,7 +64,7 @@ export default class AuthMiddleware {
                 res.redirect('/refresh-token?nextlink='+ req.path);
                 return;
             }
-            throw new HttpError(401, '토큰이 없습니다.');
+            throw new UnauthorizedError();
         }
         next();
     }

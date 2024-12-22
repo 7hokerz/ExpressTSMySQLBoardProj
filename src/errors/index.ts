@@ -1,5 +1,9 @@
-import HttpError from "./HttpError";
+import { BaseError } from "./BaseError";
+import { BadRequestError, UnauthorizedError, NotFoundError } from './HttpException';
+import { DatabaseError } from "./DatabaseError";
 
 export {
-    HttpError,
+    BaseError,
+    BadRequestError, UnauthorizedError, NotFoundError,
+    DatabaseError
 }

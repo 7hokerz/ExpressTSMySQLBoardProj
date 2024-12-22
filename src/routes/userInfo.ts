@@ -1,15 +1,15 @@
 import express from 'express';
 import { UserController } from '../controllers';
+import { container } from 'tsyringe';
 
 const router = express.Router();
 
-const userController = new UserController();
+const userController = container.resolve(UserController);
 
-// 회원정보 페이지 렌더링
+// 회원정보 페이지 
 router.get('/', userController.renderUserInfoPage);
 
-// 회원정보 수정 페이지 렌더링 및 수정 라우터
-router.route('/edit')
+router.route('/edit') // 회원정보 수정 라우터
     .get(userController.renderEditPage)
     .put(userController.edit);
 

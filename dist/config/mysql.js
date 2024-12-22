@@ -64,8 +64,10 @@ let Database = class Database {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const activeConnections = yield this.fetchActiveConnections();
-                for (const conn of activeConnections)
+                for (const conn of activeConnections) {
+                    console.log(conn);
                     this.release(conn);
+                }
                 yield this.pool.end();
             }
             catch (error) {

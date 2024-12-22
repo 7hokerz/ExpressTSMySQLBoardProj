@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const QueryExecutor_1 = __importDefault(require("./QueryExecutor"));
+const errors_1 = require("../errors");
 class PostDAO {
     constructor(connection) {
         QueryExecutor_1.default.initialize(connection);
@@ -20,12 +21,37 @@ class PostDAO {
     getPosts() {
         return __awaiter(this, void 0, void 0, function* () {
             const query = `
-            SELECT P.*, COUNT(L.like_id) AS like_count
+            SELECT P.post_id, P.title, P.created_at, P.view_count,
+            COUNT(L.like_id) AS like_count
             FROM posts P
             LEFT JOIN postLike L 
             ON P.post_id = L.post_id
             GROUP BY P.post_id
-            ORDER BY created_at DESC`;
+            ORDER BY P.created_at DESC`;
+            const { rows } = yield QueryExecutor_1.default.executeQuery(query);
+            return rows;
+        });
+    }
+    getPaginatedPosts(limit, offset) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `SELECT P.post_id, P.title, P.created_at, P.view_count, 
+            L.like_count
+        FROM posts P
+        LEFT JOIN (
+            SELECT post_id, COUNT(like_id) AS like_count
+            FROM postLike
+            GROUP BY post_id
+        ) L
+        ON P.post_id = L.post_id
+        ORDER BY P.created_at DESC
+        LIMIT ? OFFSET ?`;
+            const { rows } = yield QueryExecutor_1.default.executeQuery(query, [String(limit), String(offset)]);
+            return rows;
+        });
+    }
+    getPostsCount() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const query = `SELECT COUNT(*) AS total_posts FROM posts`;
             const { rows } = yield QueryExecutor_1.default.executeQuery(query);
             return rows;
         });
@@ -77,7 +103,7 @@ class PostDAO {
         WHERE post_id = ?`;
             const { header } = yield QueryExecutor_1.default.executeQuery(query, [postId]);
             if (header.affectedRows === 0) {
-                throw new Error(`Post with ID ${postId} not found`);
+                throw new errors_1.NotFoundError(`Post with ID ${postId}`);
             }
         });
     }
@@ -96,11 +122,11 @@ class PostDAO {
     }
     createPost(post, userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { title, content, imageurl } = post;
+            const { title, content, imagePath } = post;
             const query = `
         INSERT INTO posts (user_id, title, content, imageurl) 
         VALUES (?, ?, ?, ?)`;
-            yield QueryExecutor_1.default.executeQuery(query, [userId, title, content, imageurl !== null && imageurl !== void 0 ? imageurl : null]);
+            yield QueryExecutor_1.default.executeQuery(query, [userId, title, content, imagePath !== null && imagePath !== void 0 ? imagePath : null]);
         });
     }
 }

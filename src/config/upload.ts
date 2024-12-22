@@ -1,7 +1,7 @@
 import { Request } from 'express';
 import multer, { FileFilterCallback } from 'multer';
 import path from 'path';
-import { ImageType } from '../utils/types-modules';
+import { ImageType } from '../types';
 
 // 이미지 파일 유형 검증
 const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
@@ -13,30 +13,12 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallb
     else cb(new Error('Invalid file type. Only image files are allowed.'));
 };
 
-// 저장 위치, 파일명 설정
-const storage = multer.diskStorage({
-    destination: (
-        req: Request, 
-        file: Express.Multer.File, 
-        cb: (error: Error | null, destination: string) => void
-    ) => {
-        cb(null, './uploads/');
-    },
-    filename: (
-        req: Request, 
-        file: Express.Multer.File, 
-        cb: (error: Error | null, filename: string) => void
-    ) => {
-        cb(null, Date.now() + file.originalname);
-    },
-});
-
-// 업로드 설정
+// 업로드 설정 (메모리 스토리지(버퍼))
 export const upload = multer({
-    storage: storage,
+    storage: multer.memoryStorage(),
     fileFilter: fileFilter,
     limits: {
-        fileSize: 20 * 1024 * 1024, // 20MB
+        fileSize: 15 * 1024 * 1024, // 15MB
         files: 1,
     }
 });
@@ -50,3 +32,25 @@ export const upload = multer({
  * : 열거형에 있는 값들 중 현재 확장자가 있는지 확인
  * 
  */
+
+
+/*
+// 저장 위치, 파일명 설정 (upload 후 바로 디스크에 저장)
+const storage = multer.diskStorage({
+    destination: (
+        req: Request, 
+        file: Express.Multer.File, 
+        cb: (error: Error | null, destination: string) => void
+    ) => {
+        const path = req.body.isTemp ? './uploads/temp' : './uploads/final';
+        cb(null, path);
+    },
+    filename: (
+        req: Request, 
+        file: Express.Multer.File, 
+        cb: (error: Error | null, filename: string) => void
+    ) => {
+        cb(null, Date.now() + file.originalname);
+    },
+});
+*/

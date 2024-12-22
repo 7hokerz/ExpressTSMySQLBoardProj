@@ -1,4 +1,4 @@
-import { TokenByRefresh } from '../../utils/types-modules';
+import { TokenByRefresh } from '../../interfaces';
 
 export interface ITokenRepository {
     create(userId: number, token: string, expiresAt: Date): Promise<void>;

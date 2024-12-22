@@ -1,5 +1,5 @@
 import { PoolConnection } from 'mysql2/promise';
-import { TokenByRefresh } from '../utils/types-modules';
+import { TokenByRefresh } from '../interfaces';
 import QueryExecutor from './QueryExecutor';
 import { ITokenRepository } from '../domain/interfaces/';
 

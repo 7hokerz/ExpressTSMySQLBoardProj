@@ -44,8 +44,10 @@ export default class Database {
       try {
         const activeConnections = await this.fetchActiveConnections();
         
-        for (const conn of activeConnections) this.release(conn);
-        
+        for (const conn of activeConnections) {
+          console.log(conn);
+          this.release(conn);
+        }
         await this.pool.end();
       } catch (error) {
         console.error("Failed to close the pool:", error);

@@ -1,0 +1,10 @@
+<div class="comment-list">
+    <% comment.forEach(comment => { %>
+        <div class="comment-card">
+          <p><%= comment.content %></p>
+          <span>(작성일: <%= new Date(comment.created_at).toLocaleDateString() %>)</span>
+          <span>작성자: <%= comment.commentUser.username %></span>
+          <button type="button" onclick="deleteComment('<%= comment.comment_id %>')">댓글 삭제</button>
+        </div>
+    <% }); %>
+</div>

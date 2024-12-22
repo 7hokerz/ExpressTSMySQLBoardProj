@@ -1,6 +1,6 @@
 import { container } from 'tsyringe';
 import { DAOFactory } from '../daos';
-import { HttpError } from '../errors';
+import { DatabaseError } from '../errors';
 import Database from '../config/mysql';
 
 export function Transaction(target: any, propertyKey: string) {
@@ -22,7 +22,7 @@ export function withDB<T extends { new (...args: any[]): {} }>(constructor: T) {
             constructor.prototype[methodName] = async function (...args: any[]) {
                 const connection = await db.getConnection();
                 
-                if (!connection) throw new HttpError(500, "데이터베이스 연결 실패");
+                if (!connection) throw new DatabaseError("데이터베이스 연결 실패");
                 try {
                     this.daofactory = DAOFactory.getInstance(connection);
 
@@ -36,9 +36,9 @@ export function withDB<T extends { new (...args: any[]): {} }>(constructor: T) {
                 } catch (error: any) {
                     if(isTransaction) {
                         await connection.rollback();
-                        throw new HttpError(500, '트랜잭션 처리 중 오류.');
+                        //throw new DatabaseError('트랜잭션 처리 중 오류.');
                     }
-                    throw new HttpError(500, '서비스 처리 중 오류.');
+                    throw error;
                 } finally {
                     db.release(connection);
                 }

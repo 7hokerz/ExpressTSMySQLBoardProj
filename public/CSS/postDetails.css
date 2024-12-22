@@ -94,6 +94,19 @@ body {
   cursor: pointer; /* 클릭 가능 상태 */
 }
 
+/* 좋아요일 시 스타일 */
+.liked {
+  background-color: green;
+  color: white;
+}
+
+/* 로딩 중(좋아요 버튼 비활성화)*/
+.loading {
+  position: relative;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 /* 슬라이드 인 애니메이션 */
 @keyframes slide-in {
   from {

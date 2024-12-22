@@ -3,43 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create New Post</title>
+  <title> Create New Post </title>
   <link rel="stylesheet" href="/CSS/newPost.css">
 </head>
 <body>
   <header>
-    <h1>새 게시글 작성</h1>
+    <h1> 새 게시글 작성 </h1>
   </header>
   <main>
-    <form method="POST" action="/posts/new">
+    <form>
       <div>
-        <label for="title">제목:</label>
+        <label for="title"> 제목: </label>
         <input type="text" id="title" name="title" placeholder="제목을 입력하세요" required>
       </div>
       <div>
-        <label for="content">내용:</label>
-        <textarea id="content" name="content" rows="10" placeholder="내용을 입력하세요" required></textarea>
+        <label for="content"> 내용: </label>
+        <iframe id="editor" srcdoc="" style="width:100%; height:500px; border:1px solid black;">
+
+        </iframe>
       </div>
       <div>
-        <label for="img">이미지:</label>
-        <img id="uploadedImage" src="" loading="lazy" alt="Uploaded Image" style="max-width: 300px; display: none;" />
+        <input type="button" value="이미지 업로드" onclick="
+        window.open('/posts/upload', '_blank', 'width=660, height=245', 'scrollbars=no');">
       </div>
-      <input type="hidden" id="imageurl" name="imageurl" />
-      <button type="submit">제출하기</button>
+      
+      <input type="hidden" id="imageId" value="" name="imageId" />
+      <button id="post-upload-btn" type="submit"> 제출하기 </button>
     </form>
-    <form id="uploadForm" enctype="multipart/form-data">
-      <div>
-        <input type="file" name="image" required/>
-      </div>
-      <div>
-        <label for="fileName">파일 이름:</label>
-        <input type="text" name="fileName" required/>
-      </div>
-      <button type="submit">업로드하기</button>
-    </form>
-    
-    <script src="/JS/uploadImage.js"></script>
-    
+
+    <script src="/JS/post-editor.js"></script>
+
   </main>
 </body>
 </html>

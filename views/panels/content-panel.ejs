@@ -1,0 +1,8 @@
+
+<h1> 제목: <%= post.title %> </h1>
+<p> <%- post.content %> </p>
+<h4> 작성일: <%= new Date(post.created_at).toLocaleDateString() %> </h4>
+<h4> 작성자: <%= postUser.username %> </h4>
+<h4>
+    좋아요: <span id="like_count"><%= post.like_count %></span>개
+</h4>

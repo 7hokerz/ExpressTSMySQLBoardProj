@@ -21,12 +21,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const tsyringe_1 = require("tsyringe");
 const utils_1 = require("../utils/");
 const decorators_1 = require("../decorators");
 const daos_1 = require("../daos");
-const tsyringe_1 = require("tsyringe");
 let TokenService = class TokenService {
-    constructor(jwttoken = new utils_1.TokenUtil()) {
+    constructor(jwttoken) {
         this.jwttoken = jwttoken;
     }
     // 리프레시, 액세스 토큰 생성

@@ -1,0 +1,11 @@
+
+<button id="like-button" type="button" data-post-id="<%= post.post_id %>"
+    data-like-status="<%= post.stat %>"> 좋아요 </button>
+
+  <%- include('../components/comment-create'); %>
+  <%- include('../components/comment-list'); %>
+
+  <a href="/posts/<%= post.post_id %>/update"> 게시글 수정 </a>
+  <a href="/posts"> 목록으로 돌아가기 </a>
+
+  <button id="delete-post-button" type="button" data-post-id="<%= post.post_id %>"> 게시글 삭제 </button>

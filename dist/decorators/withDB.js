@@ -33,7 +33,7 @@ function withDB(constructor) {
                 return __awaiter(this, void 0, void 0, function* () {
                     const connection = yield db.getConnection();
                     if (!connection)
-                        throw new errors_1.HttpError(500, "데이터베이스 연결 실패");
+                        throw new errors_1.DatabaseError("데이터베이스 연결 실패");
                     try {
                         this.daofactory = daos_1.DAOFactory.getInstance(connection);
                         if (isTransaction)
@@ -46,9 +46,9 @@ function withDB(constructor) {
                     catch (error) {
                         if (isTransaction) {
                             yield connection.rollback();
-                            throw new errors_1.HttpError(500, '트랜잭션 처리 중 오류.');
+                            //throw new DatabaseError('트랜잭션 처리 중 오류.');
                         }
-                        throw new errors_1.HttpError(500, '서비스 처리 중 오류.');
+                        throw error;
                     }
                     finally {
                         db.release(connection);
